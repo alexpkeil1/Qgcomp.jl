@@ -1,3 +1,5 @@
+#! cd /Users/keilap/repo/Qgcomp_julia/Qgcomp.jl/docs; /usr/bin/env julia --project '/Users/keilap/repo/Qgcomp_julia/Qgcomp.jl/docs/make.jl'
+
 using Documenter, Qgcomp
 using Documenter.Remotes: GitHub
 
@@ -27,10 +29,10 @@ makedocs(;
     source = "src",
     build = "build",
     highlightsig = true,
-    #repo = GitHub("alexpkeil1", "Qgcomp.jl")
+    repo = GitHub("alexpkeil1", "Qgcomp.jl"),
     remotes = nothing
 )
-#=
+
 deploydocs(;
     repo = "github.com/alexpkeil1/Qgcomp.jl.git",
     branch = "gh-pages",
@@ -39,4 +41,3 @@ deploydocs(;
     devurl = "dev",
     versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
 )
-=#

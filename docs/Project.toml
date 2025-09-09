@@ -1,4 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
 LSurvival = "edbbf5c1-874b-40a5-8c9f-d8fc918aacaa"
 Qgcomp = "0b759ec4-1e0e-48f5-a120-aab12489aed1"

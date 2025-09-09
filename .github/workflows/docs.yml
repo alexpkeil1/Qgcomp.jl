@@ -1,0 +1,26 @@
+name: Documentation
+# taken from GLM
+concurrency:
+  group: ${{ github.head_ref }}.docs
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - 'main'
+      - 'gh-pages'
+    tags: '*'
+  pull_request:
+jobs:
+  Documenter:
+    permissions:
+      contents: write
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/julia-buildpkg@latest
+      - uses: julia-actions/julia-docdeploy@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+            
