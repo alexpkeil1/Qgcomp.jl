@@ -1,10 +1,32 @@
 # base.jl
 
 
+function Base.values(x::Vector{I}) where {I<:AbstractID}
+    [xi.value for xi in x]
+end
+
+function Base.show(io::IO, x::I) where {I<:AbstractID}
+    show(io, x.value)
+end
+Base.show(x::I) where {I<:AbstractID} = Base.show(stdout, x::I)
+
+function Base.isless(x::I, y::I) where {I<:AbstractID}
+    Base.isless(x.value, y.value)
+end
+
+function Base.length(x::I) where {I<:AbstractID}
+    Base.length(x.value)
+end
+
+
+
 """
+```julia
+using Qgcomp
 x = rand(100)
 q=4
-getbreaks(x,q)
+breaks = Qgcomp.getbreaks(x,q)
+```
 """
 function getbreaks(x, q)
     qs = [i / (q) for i = 0:q]
@@ -14,9 +36,13 @@ function getbreaks(x, q)
 end
 
 """
+```julia
+using Qgcomp
 x = rand(100)
 q=4
-breaks = getbreaks(x,q)
+breaks = Qgcomp.getbreaks(x,q)
+Qgcomp.breakscore(x, breaks)
+```
 """
 function breakscore(x, breaks)
     xq = [findlast(breaks .< xi) - 1 for xi in x]
@@ -24,9 +50,11 @@ function breakscore(x, breaks)
 end
 
 """
+```julia
 x = rand(100, 3)
 q=4
 nexp = size(x,2)
+```
 """
 function quantize(x, q)
     breaks = getbreaks(x, q)
@@ -43,11 +71,13 @@ function get_xq(x, q)
 end
 
 """
+```julia
 expnms = [:x1, :x2, :x3]
 expnms = ["x1", "x2", "x3"]
 df = DataFrame(rand(100,3), expnms)
 get_dfq(df, expnms, 4)
 get_dfq(df, expnms, nothing)
+```
 """
 function get_dfq(data, expnms, q)
     qdata = deepcopy(data)
@@ -95,3 +125,23 @@ function vccomb(vc, vcnames, expnms)
     vcov_psi
 end
 
+function StatsBase.coeftable(m::M; level = 0.95) where M <: Union{QGcomp_glm,QGcomp_cox}
+    β = m.fit[1]
+    se = sqrt.(diag(m.fit[2]))
+    z = β ./ se
+    p = 2 * cdf.(Normal(), .-abs.(z))
+    ci =
+        β .+
+        se[:, :] *
+        quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
+    coeftab = hcat(β, se, z, p, ci)
+    colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
+    rownms = isnothing(m.msm) ? coefnames(m.ulfit) : coefnames(m.msm.msmfit)
+    if isnothing(m.msm)
+        nonpsi = setdiff(rownms, m.expnms)
+        rownms = popfirst!(nonpsi)
+        rownms = vcat(rownms, "ψ")
+        rownms = vcat(rownms, nonpsi)
+    end
+    CoefTable(coeftab, colnms, rownms, 4,3)
+end

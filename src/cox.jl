@@ -8,13 +8,13 @@
 
 
 
-function QGcomp_cox(formula, data, expnms::Vector{Symbol}, q, family, breaks, ulfit, fit, fitted)
-    QGcomp_cox(formula, data, String.(expnms), q, family, breaks, nothing, nothing, false)
+function QGcomp_cox(formula, data, expnms::Vector{Symbol}, q, family, breaks, ulfit, fit, fitted, bootstrap, id)
+    QGcomp_cox(formula, data, String.(expnms), q, family, breaks, nothing, nothing, false, nothing, nothing)
 end
 
 function QGcomp_cox(formula, data, expnms, q)
     qdata, breaks, _ = get_dfq(data, expnms, q)
-    QGcomp_cox(formula, qdata, expnms, q, "Cox", breaks, nothing, nothing, false)
+    QGcomp_cox(formula, qdata, expnms, q, "Cox", breaks, nothing, nothing, false, nothing, nothing)
 end
 
 
@@ -43,9 +43,10 @@ end
 Base.show(m::QGcomp_cox) = Base.show(stdout, m)
 
 """
+```julia
 using Qgcomp
 using LSurvival, DataFrames, Random
-id, int, out, data = LSurvival.dgm(MersenneTwister(1212), 100 20);
+id, int, out, data = LSurvival.dgm(MersenneTwister(1212), 100, 20);
 
 data[:, 1] = round.(data[:, 1], digits = 3);
 d, X = data[:, 4], data[:, 1:3];
@@ -55,7 +56,7 @@ df = DataFrame(tab)
 
 coxph(@formula(Surv(in, out, d)~x+z1+z2), tab, ties = "efron", wts = wt) |> display
 qgcomp_cox_noboot(@formula(Surv(in, out, d)~x+z1+z2), df, ["z1", "z2"], 4) |> display
-
+```
 """
 function qgcomp_cox_noboot(formula, data, expnms, q;kwargs...)
     m = QGcomp_cox(formula, data, expnms, q)

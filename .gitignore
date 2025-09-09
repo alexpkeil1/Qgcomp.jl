@@ -27,3 +27,6 @@ Manifest.toml
 */.DS_Store
 */.gitattributes
 */.gitignore
+
+docs/build
+.DS_Store

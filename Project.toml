@@ -15,17 +15,16 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
+[sources]
+LSurvival = {rev = "main", url = "https://github.com/alexpkeil1/LSurvival.jl"}
+
 [compat]
 DataFrames = "^1"
 Distributions = "^0.25"
 ForwardDiff = "^1"
 GLM = "^1"
-LSurvival = "^1"
 LinearAlgebra = "^1"
 NLsolve = "^4"
 Random = "^1"
 StatsBase = "^0.34"
 StatsModels = "^0.7"
-
-[sources]
-LSurvival = {url = "https://github.com/alexpkeil1/LSurvival.jl", rev = "main"}

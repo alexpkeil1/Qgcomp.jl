@@ -8,16 +8,17 @@
 ####################################################################################
 
 
-function QGcomp_ee(formula, data, expnms::Vector{Symbol}, q, family, breaks, intvals, fullfit, ulfit, fit, fitted)
-    QGcomp_ee(formula, data, String.(expnms), q, family, breaks, intvals, nothing, nothing, nothing, false)
+function QGcomp_ee(formula, data, expnms::Vector{Symbol}, q, family, breaks, intvals, fullfit, ulfit, fit, fitted, bootstrap, id)
+    QGcomp_ee(formula, data, String.(expnms), q, family, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
 end
 
 function QGcomp_ee(formula, data, expnms, q, family)
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_ee(formula, qdata, expnms, q, family, breaks, intvals, nothing, nothing, nothing, false)
+    QGcomp_ee(formula, qdata, expnms, q, family, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
 end
 
 """
+```julia
 n=300
 x = rand(n, 3)
 z = rand(n, 3)
@@ -35,6 +36,7 @@ StatsBase.fit!(m2)
 m = QGcomp_ee(form, data, expnms, q, Normal())
 qgcomp_glm_noboot(form, data, expnms, 4, Normal())
 ft = qgcomp_glm_ee(form2, data, expnms, q, Normal(),degree=2)
+```
 """
 function StatsBase.fit!(m::QGcomp_ee;
     rr::Bool = false,
@@ -43,13 +45,11 @@ function StatsBase.fit!(m::QGcomp_ee;
     maxiter::Integer = 500,
     gtol::Float64 = 1e-8,
     start = nothing,
-)
     contrasts = Dict{Symbol,Any}()
+)
     sch = schema(m.formula, m.data, contrasts)
     f = apply_schema(m.formula, sch, typeof(m))
     Y,X =  modelcols(f, m.data[1:1,:])
-    
-
     pcond = size(X,2)
     pmsm = (typeof(f.rhs.terms[1]) <: InterceptTerm) + degree
     inits = zeros(pcond+pmsm)
@@ -67,12 +67,7 @@ function StatsBase.fit!(m::QGcomp_ee;
     Bi = [psii * psii' for psii in psis];                # psi_i(y,x,beta)psi_i(y,x,beta)'
     B = reduce(+, Bi)
     iA = inv(A)
-    covmat = iA * B * iA'  # sandwich variance estimate
-    
-    #m.ulfit = fit(GeneralizedLinearModel, m.formula, m.data, m.family)
-    coefs = res.zero[1:pcond]
-    #vcnames = coefnames(m.ulfit)
-    vc = covmat[1:pcond,1:pcond]
+    covmat = iA * B * iA'  # sandwich variance estimate    
     vc_psi = covmat[(pcond+1):(pcond+pmsm),(pcond+1):(pcond+pmsm)]
     psi = res.zero[(pcond+1):(pcond+pmsm)]
     m.fullfit = (res.zero, covmat)
@@ -125,7 +120,7 @@ function dfint(df,expnms,int)
     df2
 end
 
-"""
+#=
 x = rand(100, 3)
 z = rand(100, 3)
 xq, _ = get_xq(x, 4)
@@ -137,10 +132,7 @@ fit!(m)
 expnms = ["x1", "x2", "x3"]
 intvals = 0:3
 theta = rand(9)
-
-
-
-"""
+=#
 function qgcomp_eedf(theta, df, expnms, intvals, f, p1, p2, degree, family, rr)
     Y, X =  modelcols(f, df)
     n,p = size(X)
@@ -254,6 +246,7 @@ Base.show(m::QGcomp_ee) = Base.show(stdout, m)
 
 """
 # binary
+```julia
 dat = DataFrame(y=Int.(rand(Bernoulli(0.25), 50)), x1=rand(50), x2=rand(50), z=rand(50))
 
 # Marginal mixture OR (no confounders)
@@ -265,6 +258,7 @@ ft3 = qgcomp_glm_ee(@formula(y ~ x1 + x2), dat,["x1", "x2"], nothing, Binomial()
 qgcomp_glm_noboot(@formula(y ~ z + x1 + x2), dat,["x1", "x2"], 4, Binomial())
 # Marginal mixture OR
 qgcomp_glm_ee(@formula(y ~ z + x1 + x2), dat,["x1", "x2"], 4, Binomial())
+```
 """
 function qgcomp_glm_ee(formula, data, expnms, q, family; kwargs...)
     m = QGcomp_ee(formula, data, expnms, q, family)
@@ -272,21 +266,4 @@ function qgcomp_glm_ee(formula, data, expnms, q, family; kwargs...)
     m
 end
 
-function StatsBase.coeftable(m::M; level = 0.95) where M <: Union{QGcomp_glm,QGcomp_cox}
-    β = m.fit[1]
-    se = sqrt.(diag(m.fit[2]))
-    z = β ./ se
-    p = 2 * cdf.(Normal(), .-abs.(z))
-    ci =
-        β .+
-        se[:, :] *
-        quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
-    coeftab = hcat(β, se, z, p, ci)
-    colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
-    #rownms = ["$i" for i in 1:size(coeftab,1)]
-    nonpsi = setdiff(coefnames(m.ulfit), m.expnms)
-    rownms = popfirst!(nonpsi)
-    rownms = vcat(rownms, "ψ")
-    rownms = vcat(rownms, nonpsi)
-    CoefTable(coeftab, colnms, rownms, 4,3)
-end
+

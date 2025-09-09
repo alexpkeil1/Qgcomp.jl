@@ -7,6 +7,7 @@ using Distributions: Normal, cdf, quantile
 using NLsolve
 using ForwardDiff
 using LSurvival
+import Random: AbstractRNG, Xoshiro, MersenneTwister
 
 # imports
 import StatsBase:
@@ -46,18 +47,23 @@ export QGcomp_model
 
 
 # original functions
-export qgcomp_glm_noboot, qgcomp_ee_noboot, qgcomp_cox_noboot
+export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_glm_ee
 
 #expanded functions from imports
-export fit!, aic, aicc, bic, loglikelihood, isfitted
+export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted
 
 #re-exports
 export Normal, Bernoulli, Poisson
 
 
-
+# Abstract types
 include("Types.jl")
+
+# utility functions
 include("base.jl")
+include("sampling.jl")
+
+# models
 include("glm.jl")
 include("cox.jl")
 include("ee.jl")
