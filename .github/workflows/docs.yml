@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2      
-      - uses: PumasAI/add-private-registry@latest
+      - uses: PumasAI/add-private-registry@9715719d81f49a408b6f1f57a2aa36b54c46ffef
         with:
             juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
             private_registry_name: EpiRegistry
