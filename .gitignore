@@ -31,3 +31,4 @@ Manifest.toml
 docs/build
 .DS_Store
 /settings
+/docs/.vscode

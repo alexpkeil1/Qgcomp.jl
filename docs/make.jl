@@ -1,5 +1,8 @@
 #! cd /Users/keilap/repo/Qgcomp_julia/Qgcomp.jl/docs; /usr/bin/env julia --project '/Users/keilap/repo/Qgcomp_julia/Qgcomp.jl/docs/make.jl'
 
+using Pkg
+Pkg.Registry.add(url="https://github.com/alexpkeil1/EpiRegistry.git")
+
 using Documenter, Qgcomp
 using Documenter.Remotes: GitHub
 
