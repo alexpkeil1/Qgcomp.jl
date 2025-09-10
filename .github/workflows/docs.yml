@@ -20,8 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: julia-actions/setup-julia@v2      
       - uses: PumasAI/add-private-registry@latest
-          with:
+        with:
             juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
             private_registry_name: EpiRegistry
             private_registry_uuid: 26539dc5-a174-43eb-a619-f6f40fb70910
