@@ -61,12 +61,16 @@ include("Types.jl")
 
 # utility functions
 include("base.jl")
+include("utility.jl")
 include("sampling.jl")
 
+# re-exports
+include("statsbase.jl")
+
 # models
-include("glm.jl")
-include("cox.jl")
-include("ee.jl")
+include("model_glm.jl")
+include("model_cox.jl")
+include("model_ee.jl")
 
 
 end # module Qgcomp

@@ -170,28 +170,6 @@ function qgcomp_eedf(theta, df, expnms, intvals, f, p1, p2, degree, family, rr)
 end
 
 
-function StatsBase.coeftable(m::QGcomp_ee; level = 0.95)
-    contrasts = Dict{Symbol,Any}()
-    sch = schema(m.formula, m.data, contrasts)
-    f = apply_schema(m.formula, sch, typeof(m))
-    #Y,X =  modelcols(f, m.data[1:1,:])
-
-     β = m.fit[1]
-    se = sqrt.(diag(m.fit[2]))
-    z = β ./ se
-    p = 2 * cdf.(Normal(), .-abs.(z))
-    ci =
-        β .+
-        se[:, :] *
-        quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
-    coeftab = hcat(β, se, z, p, ci)
-    colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
-    rownms = ["ψ$i" for i in 1:size(coeftab,1)]
-    if (typeof(f.rhs.terms[1]) == InterceptTerm{true})
-        rownms = vcat("(Intercept)", rownms[1:(end-1)])
-    end
-    CoefTable(coeftab, colnms, rownms, 4,3)
-end
 
 function coeftable_eeul(m::QGcomp_ee; level = 0.95, limitcond=false)
     contrasts = Dict{Symbol,Any}()

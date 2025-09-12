@@ -1,7 +1,7 @@
 name = "Qgcomp"
 uuid = "0b759ec4-1e0e-48f5-a120-aab12489aed1"
 authors = ["Alex Keil <alexpkeil1@users.noreply.github.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -14,6 +14,7 @@ NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 LSurvival = {rev = "main", url = "https://github.com/alexpkeil1/LSurvival.jl"}
@@ -28,3 +29,4 @@ NLsolve = "^4"
 Random = "^1"
 StatsBase = "^0.34"
 StatsModels = "^0.7"
+Test = "1.11.0"
