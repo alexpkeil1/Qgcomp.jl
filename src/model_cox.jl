@@ -18,6 +18,7 @@ function QGcomp_cox(formula, data, expnms, q)
 end
 
 
+
 function fit!(m::QGcomp_cox;kwargs...)
     m.ulfit = fit(PHModel, m.formula, m.data;kwargs...)
     coefs = coef(m.ulfit)

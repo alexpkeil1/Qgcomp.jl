@@ -54,21 +54,34 @@ for f in (:loglikelihood, :aic, :aicc, :bic, :fitted)
 end
 
 
-
-function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGcomp_cox}}
+function gencoeftab(m, level)
     β = m.fit[1]
     se = sqrt.(diag(m.fit[2]))
     z = β ./ se
     p = 2 * cdf.(Normal(), .-abs.(z))
-    ci = β .+ se[:, :] * quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
-    coeftab = hcat(β, se, z, p, ci)
+    crit = quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
+    ci = β .+ se[:, :] * crit
+    hcat(β, se, z, p, ci)
+end
+
+
+function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGcomp_cox}}
+    contrasts = Dict{Symbol,Any}()
+    sch = schema(m.formula, m.data, contrasts)
+    f = apply_schema(m.formula, sch, typeof(m))    
+    hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
+    coeftab = gencoeftab(m, level)
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
     rownms = isnothing(m.msm) ? coefnames(m.ulfit) : coefnames(m.msm.msmfit)
     if isnothing(m.msm)
         nonpsi = setdiff(rownms, m.expnms)
         #if !hasintercept(m.formula) 
         #end
-        rownms = popfirst!(nonpsi)
+        if hasintercept
+            rownms = popfirst!(nonpsi)
+        else
+            rownms = []
+        end
         rownms = vcat(rownms, "ψ")
         rownms = vcat(rownms, nonpsi)
     end
@@ -80,20 +93,14 @@ function StatsBase.coeftable(m::QGcomp_ee; level = 0.95)
     contrasts = Dict{Symbol,Any}()
     sch = schema(m.formula, m.data, contrasts)
     f = apply_schema(m.formula, sch, typeof(m))
-    #Y,X =  modelcols(f, m.data[1:1,:])
+    
+    hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
 
-     β = m.fit[1]
-    se = sqrt.(diag(m.fit[2]))
-    z = β ./ se
-    p = 2 * cdf.(Normal(), .-abs.(z))
-    ci =
-        β .+
-        se[:, :] *
-        quantile.(Normal(), [(1.0 - level) / 2.0, 1.0 .- (1.0 - level) / 2.0])[:, :]'
-    coeftab = hcat(β, se, z, p, ci)
+    coeftab = gencoeftab(m, level)
+
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
     rownms = ["ψ$i" for i in 1:size(coeftab,1)]
-    if (typeof(f.rhs.terms[1]) == InterceptTerm{true})
+    if hasintercept
         rownms = vcat("(Intercept)", rownms[1:(end-1)])
     end
     CoefTable(coeftab, colnms, rownms, 4,3)

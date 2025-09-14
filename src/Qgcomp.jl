@@ -10,6 +10,10 @@ using LSurvival
 import Random: AbstractRNG, Xoshiro, MersenneTwister
 
 # imports
+import StatsModels:
+    hasintercept,
+    drop_intercept
+
 import StatsBase:
     aic,
     aicc,
@@ -66,6 +70,7 @@ include("sampling.jl")
 
 # re-exports
 include("statsbase.jl")
+include("statsmodels.jl")
 
 # models
 include("model_glm.jl")
