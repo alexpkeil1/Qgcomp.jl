@@ -51,7 +51,7 @@ export QGcomp_model
 
 
 # original functions
-export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_glm_ee
+export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, qgcomp_glm_ee, ID
 
 #expanded functions from imports
 export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted

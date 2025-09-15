@@ -32,7 +32,7 @@ end
 
 
 function subformula(f, expnms)
-    rhs = deepcopy([r for r in f.rhs])
+    rhs = length(terms(f.rhs))==1 ? deepcopy(terms(f.rhs)) : [r for r in f.rhs]
     for (idx, r) in enumerate(rhs)
         subterm!(rhs, idx, r, expnms)
     end
@@ -59,4 +59,22 @@ function sublhs_surv(f, symbout, simbd)
     lhs.exorig.args[end-1]  = typeof(lhs.exorig.args[end-1])(symbout)
     lhs.exorig.args[end]  = typeof(lhs.exorig.args[end])(simbd)
     FormulaTerm(lhs, f.rhs)
+end
+
+
+function msmcoxcheck(y::Y) where {Y<:LSurvival.AbstractLSurvivalResp}
+    msg = "Person-period data and late-entry is not permitted in this function. 
+    Time-to-event outcomes that need to be specified as
+
+    `Surv(<enter time>, <exit time>, <event indicator>)`
+
+    are not allowed]. If you have no late entry, you can modify the outcome
+    specification to  
+
+    `Surv(<exit time>, <event indicator>)`
+
+    Note: If you have late entry and omit <enter time> to avoid this error message, 
+    you will have bias in your estimates.
+    "
+    @assert allequal(y.enter) 
 end

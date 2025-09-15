@@ -17,7 +17,7 @@ mutable struct QgcMSM{
     V2 <: Array{Float64, 2}
     } <: AbstractQgcMSM 
     msmfit::F
-    ypred::Vector{Float64}
+    ypred::Vector
     intval::Vector{Float64}
     bootparm_draws::D
     bootparm_vcov::V
@@ -62,7 +62,7 @@ mutable struct QGcomp_cox{
     ulfit::Any
     fit::Any
     fitted::Bool
-    id::I
+    id::Vector{I}
     msm::Any
 end
 

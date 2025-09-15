@@ -73,6 +73,9 @@ function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGco
     coeftab = gencoeftab(m, level)
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
     rownms = isnothing(m.msm) ? coefnames(m.ulfit) : coefnames(m.msm.msmfit)
+    if typeof(rownms) <: String
+        rownms = [rownms]
+     end 
     if isnothing(m.msm)
         nonpsi = setdiff(rownms, m.expnms)
         #if !hasintercept(m.formula) 

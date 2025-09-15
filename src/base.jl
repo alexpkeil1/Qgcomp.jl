@@ -106,31 +106,35 @@ function psicomb(coefs, coefnames_, expnms)
     expidx = findall([vci ∈ expnms for vci in coefnames_])
     weightvec[expidx] .= 1.0
     nonpsi = deepcopy(coefs[findall(weightvec .== 0)])
+    # may need to have a better way to find intercept
     psi = "(Intercept)" ∈ coefnames_ ? popfirst!(nonpsi) : float.([])
     psi = vcat(psi, weightvec' * coefs, nonpsi)
     psi
 end
 
-#TODO: re-work for non-intercept models
 
 function vccomb(vc, vcnames, expnms)
     weightvec = zeros(length(vcnames))
     expidx = findall([vci ∈ expnms for vci in vcnames])
     weightvec[expidx] .= 1.0
-    bcols = findall(weightvec .== 0.0)
-    psicols = collect(1:length(bcols)) .+ 1
-    psicols[1] = 1
-    vcov_psi = zeros(length(bcols) + 1, length(bcols) + 1)
-    vcov_psi[psicols, psicols] = vc[bcols, bcols]
-    vcov_psi[1, 1] = vc[1, 1] # intercept
-    vcov_psi[2, 2] = weightvec' * vc * weightvec
-    wv = zeros(length(vcnames))
-    for (psicol, bcol) in enumerate(bcols)
-        j = psicol > 1 ? psicol + 1 : 1
-        wv .*= 0.0
-        wv[bcol] = 1.0
-        vcov_psi[2, j] = vcov_psi[j, 2] = weightvec' * vc * wv
-        #sum(vc[findall(weightvec .> 0.0),bcol])
+    nonexpcols = findall(weightvec .== 0.0)
+    nonexpstart = findfirst(weightvec .== 0.0)
+    expstart = findfirst(weightvec .> 0.0)
+    vcov_psi = zeros(length(nonexpcols) + 1, length(nonexpcols) + 1)
+    # diagonal term: mixture X mixture
+    vcov_psi[expstart, expstart] = weightvec' * vc * weightvec # psi
+    if length(nonexpcols)>0
+        expdestination = setdiff(1:(length(nonexpcols).+ 1) , expstart)
+        # diagonal terms: covariate X covariate
+        vcov_psi[expdestination, expdestination] = vc[nonexpcols, nonexpcols]
+        # off-diagonal terms: mixture X covariate
+        wv = zeros(length(vcnames)) # temporary weight vector for each non-exposure column
+        for (cov_index, cov_col) in enumerate(nonexpcols)
+            j = expdestination[cov_index]
+            wv .*= 0.0
+            wv[cov_col] = 1.0
+            vcov_psi[expstart, j] = vcov_psi[j, expstart] = weightvec' * vc * wv
+        end
     end
     vcov_psi
 end
