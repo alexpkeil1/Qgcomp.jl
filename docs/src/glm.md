@@ -48,42 +48,46 @@ using Qgcomp, DataFrames, Random, StatsBase, StatsModels
     ns = floor.(Int, n .* props)
     xq[:,2] = vcat(xq[1:ns[1],1], sample(rng, xq[ns[1]+1:end,1], n-ns[1]))
     xq[:,3] = 3 .- vcat(xq[1:ns[2],1], sample(rng, xq[ns[2]+1:end,1], n-ns[2]))
-    y = randn(n) + xq * [0.25, -0.1, 0.05]
+    y = randn(rng, n) + xq * [0.25, -0.1, 0.05]
     lindata = DataFrame(hcat(y, xq), [:y, :x1, :x2, :x3])
 
-
+    # check correlations
     cor(xq)
+
+    # fit model
     qgcomp_glm_noboot(@formula(y~x1+x2+x3), lindata, ["x1", "x2", "x3"], 4, Normal())
 
 ```
 
 ```output
 
-> cor(xq)
+julia> cor(xq)
+       # fit model
 3×3 Matrix{Float64}:
   1.0        0.949536  -0.28404
   0.949536   1.0       -0.293409
  -0.28404   -0.293409   1.0
 
-> qgcomp_glm_noboot(@formula(y~x1+x2+x3), lindata, ["x1", "x2", "x3"], 4, Normal())
+ 
+julia> qgcomp_glm_noboot(@formula(y~x1+x2+x3), lindata, ["x1", "x2", "x3"], 4, Normal())
 Negative weights
 1×4 DataFrame
  Row │ exposure  coef       ψ_partial  weight  
      │ String    Float64    Float64    Float64 
 ─────┼─────────────────────────────────────────
-   1 │ x2        -0.081113  -0.081113      1.0
+   1 │ x2        -0.183042  -0.183042      1.0
 Positive weights
 2×4 DataFrame
- Row │ exposure  coef      ψ_partial  weight   
-     │ String    Float64   Float64    Float64  
-─────┼─────────────────────────────────────────
-   1 │ x1        0.253556   0.304781  0.831926
-   2 │ x3        0.051226   0.304781  0.168074
+ Row │ exposure  coef       ψ_partial  weight   
+     │ String    Float64    Float64    Float64  
+─────┼──────────────────────────────────────────
+   1 │ x1        0.309828    0.370049  0.837262
+   2 │ x3        0.0602209   0.370049  0.162738
 ─────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error      z  Pr(>|z|)  Lower 95%  Upper 95%
+                 Coef.  Std. Error     z  Pr(>|z|)   Lower 95%  Upper 95%
 ─────────────────────────────────────────────────────────────────────────
-(Intercept)  -0.048126   0.0824814  -0.58    0.5596  -0.209787   0.113535
-ψ             0.223669   0.0566225   3.95    <1e-04   0.11269    0.334647
+(Intercept)  0.0495911   0.0802297  0.62    0.5365  -0.107656    0.206839
+ψ            0.187007    0.0550767  3.40    0.0007   0.0790588   0.294956
 ─────────────────────────────────────────────────────────────────────────
 ```
 
