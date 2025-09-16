@@ -14,6 +14,10 @@ Modules = [Qgcomp]
 
 ```@contents
 Pages = [
+    "glm.md"
     ]
     Depth = 3
 ```
+
+# References
+Alexander P. Keil, Jessie P. Buckley, Katie M. O'Brien, Kelly K. Ferguson, Shanshan Zhao, Alexandra J. White. A quantile-based g-computation approach to addressing the effects of exposure mixtures. <https://doi.org/10.1289/EHP5838> 
