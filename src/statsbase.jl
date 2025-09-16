@@ -1,6 +1,6 @@
 # statsbase.jl: re-exports of StatsBase functions
 
-StatsBase.isfitted(m::QGcomp_glm) = m.fitted
+StatsBase.isfitted(m::M) where {M<:QGcomp_model} = m.fitted
 
 
 
@@ -25,21 +25,21 @@ m
 function StatsBase.fit!(
     rng,
     m::QGcomp_glm;
-    contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(),
-    bootstrap=false,
+    contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
+    bootstrap = false,
     kwargs...,
 )
     if bootstrap
-        fit_boot!(rng, m; contrasts=contrasts, kwargs...)
+        fit_boot!(rng, m; contrasts = contrasts, kwargs...)
     else
         fit_noboot!(m)
     end
     nothing
 end
 
-function StatsBase.fit!(m::QGcomp_glm; contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(), bootstrap=false, kwargs...)
+function StatsBase.fit!(m::QGcomp_glm; contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(), bootstrap = false, kwargs...)
     if bootstrap
-        fit_boot!(m; contrasts=contrasts, kwargs...)
+        fit_boot!(m; contrasts = contrasts, kwargs...)
     else
         fit_noboot!(m)
     end
@@ -68,14 +68,14 @@ end
 function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGcomp_cox}}
     contrasts = Dict{Symbol,Any}()
     sch = schema(m.formula, m.data, contrasts)
-    f = apply_schema(m.formula, sch, typeof(m))    
+    f = apply_schema(m.formula, sch, typeof(m))
     hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
     coeftab = gencoeftab(m, level)
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
     rownms = isnothing(m.msm) ? coefnames(m.ulfit) : coefnames(m.msm.msmfit)
     if typeof(rownms) <: String
         rownms = [rownms]
-     end 
+    end
     if isnothing(m.msm)
         nonpsi = setdiff(rownms, m.expnms)
         #if !hasintercept(m.formula) 
@@ -96,15 +96,15 @@ function StatsBase.coeftable(m::QGcomp_ee; level = 0.95)
     contrasts = Dict{Symbol,Any}()
     sch = schema(m.formula, m.data, contrasts)
     f = apply_schema(m.formula, sch, typeof(m))
-    
+
     hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
 
     coeftab = gencoeftab(m, level)
 
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
-    rownms = ["ψ$i" for i in 1:size(coeftab,1)]
+    rownms = ["ψ$i" for i = 1:size(coeftab, 1)]
     if hasintercept
         rownms = vcat("(Intercept)", rownms[1:(end-1)])
     end
-    CoefTable(coeftab, colnms, rownms, 4,3)
+    CoefTable(coeftab, colnms, rownms, 4, 3)
 end

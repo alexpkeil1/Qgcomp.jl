@@ -1,6 +1,28 @@
 # base.jl: core helper functions from quantile g-computation
 
 
+function QGcomp_weights()
+    QGcomp_weights(DataFrame(), DataFrame(), false)
+end
+
+
+function Base.show(io::IO, w::QGcomp_weights)
+    if !isvalid(w)
+        println(io, "Exposure specific weights not estimated in this type of model")
+    else
+        println(io, "Negative weights")
+        println(io, size(w.neg, 1) > 0 ? w.neg : "(none)")
+        println(io, "Positive weights")
+        println(io, size(w.pos, 1) > 0 ? w.pos : "(none)\n")
+    end
+end
+
+function Base.show(w::Q) where {Q<:QGcomp_weights}
+    show(stdout, w)
+end
+
+
+
 function Base.values(x::Vector{I}) where {I<:AbstractID}
     [xi.value for xi in x]
 end
@@ -8,7 +30,10 @@ end
 function Base.show(io::IO, x::I) where {I<:AbstractID}
     show(io, x.value)
 end
-Base.show(x::I) where {I<:AbstractID} = Base.show(stdout, x::I)
+
+function Base.show(x::I) where {I<:AbstractID}
+    show(stdout, x)
+end
 
 function Base.isless(x::I, y::I) where {I<:AbstractID}
     Base.isless(x.value, y.value)
@@ -17,7 +42,6 @@ end
 function Base.length(x::I) where {I<:AbstractID}
     Base.length(x.value)
 end
-
 
 
 #=
@@ -112,6 +136,44 @@ function psicomb(coefs, coefnames_, expnms)
     psi
 end
 
+#=
+
+using Qgcomp, Random, DataFrames, StatsModels
+using GLM, LSurvival
+
+    x1 = rand(100, 3)
+    x = rand(100, 3)
+    z = rand(100, 3)
+
+    xq, _ = Qgcomp.get_xq(x, 4)
+    y = randn(100) + xq * [.1, 0.05, 0]
+    lindata = DataFrame(hcat(y,x,z), [:y, :x1, :x2, :x3, :z1, :z2, :z3])
+
+    expnms = ["x1", "x2", "x3"]
+
+    form = @formula(y~x1+x2+x3+z1+z2+z3)
+    m = qgcomp_glm_noboot(form, lindata, expnms, 4, Normal())
+
+    coefs = coef(m.ulfit)
+    coefnames_ = coefnames(m.ulfit)
+    expnms = String.(expnms)
+    negw, posw = getweights(coefs, coefnames_, expnms)
+=#
+function getweights(coefs, coefnames_, expnms)
+    expidx = reduce(vcat, [findall(coefnames_ .== expnm) for expnm in expnms])
+    posidx = intersect(findall(coefs .>= 0.0), expidx)
+    negidx = intersect(findall(coefs .< 0.0), expidx)
+    partials = map(i -> sum(coefs[i]), (negidx, posidx))
+    partialnames = map(i -> coefnames_[i], (negidx, posidx))
+    outcoefs = map(i -> coefs[i], (negidx, posidx))
+    weights = map(i -> outcoefs[i] ./ partials[i], (1, 2))
+    map(i -> begin
+        df = DataFrame(exposure = partialnames[i], coef = outcoefs[i], weight = weights[i])
+        df.ψ_partial .= partials[i]
+        df[:, ["exposure", "coef", "ψ_partial", "weight"]]
+    end, 1:2)
+end
+
 
 function vccomb(vc, vcnames, expnms)
     weightvec = zeros(length(vcnames))
@@ -124,7 +186,7 @@ function vccomb(vc, vcnames, expnms)
     # diagonal term: mixture X mixture
     vcov_psi[expstart, expstart] = weightvec' * vc * weightvec # psi
     if length(nonexpcols)>0
-        expdestination = setdiff(1:(length(nonexpcols).+ 1) , expstart)
+        expdestination = setdiff(1:(length(nonexpcols) .+ 1), expstart)
         # diagonal terms: covariate X covariate
         vcov_psi[expdestination, expdestination] = vc[nonexpcols, nonexpcols]
         # off-diagonal terms: mixture X covariate
@@ -139,3 +201,8 @@ function vccomb(vc, vcnames, expnms)
     vcov_psi
 end
 
+
+
+function isvalid(w::QGcomp_weights)
+    w.isvalid
+end

@@ -6,34 +6,37 @@
 #
 ####################################################################################
 
+mutable struct Cox <: ContinuousUnivariateDistribution end
 
+function GLM.canonicallink(dist::Cox) 
+    LogLink()
+end
 
-function QGcomp_cox(formula, data, expnms, q, family, breaks, ulfit, fit, fitted)
-    QGcomp_cox(formula, data, String.(expnms), q, family, breaks, nothing, nothing, false, ID.(collect(1:size(data, 1))),nothing)
+function QGcomp_cox(formula, data, expnms, q, family, link, breaks, ulfit, fit, fitted)
+    QGcomp_cox(
+        formula,
+        data,
+        String.(expnms),
+        q,
+        family,
+        link,
+        breaks,
+        nothing,
+        nothing,
+        false,
+        ID.(collect(1:size(data, 1))),
+        nothing,
+        QGcomp_weights(),
+    )
 end
 
 function QGcomp_cox(formula, data, expnms, q)
     qdata, breaks, _ = get_dfq(data, expnms, q)
-    QGcomp_cox(formula, qdata, expnms, q, "Cox", breaks, nothing, nothing, false)
+    QGcomp_cox(formula, qdata, expnms, q, Cox(), canonicallink(Cox()), breaks, nothing, nothing, false)
 end
 
-function QgcMSM(msmfit, ypred, msmexposure) 
-    QgcMSM(
-        msmfit,
-        ypred,
-        msmexposure,
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
-    )
-end
-
-
-
-
-function fit_noboot!(m::QGcomp_cox;kwargs...)
-    m.ulfit = fit(PHModel, m.formula, m.data;kwargs...)
+function fit_noboot!(m::QGcomp_cox; kwargs...)
+    m.ulfit = fit(PHModel, m.formula, m.data; kwargs...)
     coefs = coef(m.ulfit)
     vcnames = coefnames(m.ulfit)
     vc = vcov(m.ulfit)
@@ -57,7 +60,7 @@ function _fit_msm_cox(rng, msmformula, data, ulfit, contrasts, expnms, intvals, 
     data.____in = ulfit.R.enter
     data.____out = ulfit.R.exit
     msmdata = gen_msmdata(data, msmidx, intvals, expnms) # expanded dataframe used for predictions from underlying model
-    dtemp = DataFrame(dpred=zeros(size(data, 1)), tpred=zeros(size(data, 1)))
+    dtemp = DataFrame(dpred = zeros(size(data, 1)), tpred = zeros(size(data, 1)))
     # create MSM by calling the first exposure the "mixture"
     data.mixture = data[:, expnms[1]]
     msmdata.mixture = msmdata[:, expnms[1]]
@@ -69,16 +72,16 @@ function _fit_msm_cox(rng, msmformula, data, ulfit, contrasts, expnms, intvals, 
     Ft, times = LSurvival.predict(ulfit, X)
     maxt = maximum(ulfit.R.exit)
     alltimes = vcat(times, maxt)
-    allFt = vcat(Ft, Ft[end:end,:])
-    nuniquetimes = size(allFt,1)
-    ft = vcat(Ft[1:1,:], diff(allFt, dims=1))
-    allds = vcat(rand.(rng, Bernoulli.(Ft)), zeros(Int, 1, size(Ft,2)))
-    
+    allFt = vcat(Ft, Ft[end:end, :])
+    nuniquetimes = size(allFt, 1)
+    ft = vcat(Ft[1:1, :], diff(allFt, dims = 1))
+    allds = vcat(rand.(rng, Bernoulli.(Ft)), zeros(Int, 1, size(Ft, 2)))
+
     msmdata.dpred .= 0.0
     msmdata.tpred .= maxt
 
-    newds = allds .* 0 
-    eventtimes = [findfirst(allds[:,c] .== 1) for c in 1:size(allds,2)]
+    newds = allds .* 0
+    eventtimes = [findfirst(allds[:, c] .== 1) for c = 1:size(allds, 2)]
     for (ii, tt) in enumerate(eventtimes)
         if !isnothing(tt)
             msmdata.dpred[ii] = 1.0
@@ -90,8 +93,8 @@ function _fit_msm_cox(rng, msmformula, data, ulfit, contrasts, expnms, intvals, 
     #sum(newds)/size(newds, 2)
     ncopies = length(intvals)
     endidx = [j for j in (mcsize .* (1:ncopies))]
-    begidx = vcat(1, endidx[1:end-1] .+ 1)
-    dpredmean = [StatsBase.mean(msmdata.dpred[begidx[idx]:endidx[idx]]) for idx in 1:ncopies]
+    begidx = vcat(1, endidx[1:(end-1)] .+ 1)
+    dpredmean = [StatsBase.mean(msmdata.dpred[begidx[idx]:endidx[idx]]) for idx = 1:ncopies]
 
     dpred, _ = modelcols(f, StatsModels.columntable(msmdata)) # output full time
     msm = coxph(ff, msmdata)
@@ -99,7 +102,7 @@ function _fit_msm_cox(rng, msmformula, data, ulfit, contrasts, expnms, intvals, 
 end
 
 
-function fit_boot!(rng, m::QGcomp_cox; B::Int64=200, contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(), kwargs...)
+function fit_boot!(rng, m::QGcomp_cox; B::Int64 = 200, contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(), kwargs...)
     if !issubset(keys(kwargs), (:mcsize, :iters, :intvals, :msmformula, :degree, :id))
         throw(ArgumentError("Qgcomp error: unsupported keyword argument in: $(kwargs...)"))
     end
@@ -138,8 +141,7 @@ function fit_boot!(rng, m::QGcomp_cox; B::Int64=200, contrasts::Dict{Symbol,<:An
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
 
     #### identical to glm up to this point
-    msm, dpred, dpredmean =
-        _fit_msm_cox(rng, msmformula, m.data, m.ulfit, contrasts, m.expnms, intvals, m.id, mcsize)
+    msm, dpred, dpredmean = _fit_msm_cox(rng, msmformula, m.data, m.ulfit, contrasts, m.expnms, intvals, m.id, mcsize)
 
     m.msm = QgcMSM(msm, dpred, reduce(vcat, [fill(iv, mcsize) for iv in intvals]))
     ################
@@ -158,7 +160,7 @@ function fit_boot!(rng, m::QGcomp_cox; B::Int64=200, contrasts::Dict{Symbol,<:An
             m.family,
             m.expnms,
             intvals;
-            contrasts=contrasts,
+            contrasts = contrasts,
             kwargs...,
         )
         m.msm.bootparm_draws[iter, :] = bootmsmcoef
@@ -184,14 +186,14 @@ function dobootcox(
     family,
     expnms,
     intvals;
-    contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
     kwargs...,
 )
     uid = unique(id)
     idx = collect(1:length(id))
     #idmap = [idx[findall(values(id) .== vid)] for vid in values(uid)] #observations for each id
     # individual level ids
-    selectedids = sort(sample(rng, id, length(uid), replace=true))
+    selectedids = sort(sample(rng, id, length(uid), replace = true))
 
     # rows of data/ids to pull
     bootidmap = [idx[findall(values(id) .== bid)] for bid in values(selectedids)]
@@ -216,12 +218,17 @@ end
 
 
 function Base.show(io::IO, m::QGcomp_cox)
-    if m.fitted 
+    if isfitted(m)
+        if !isnothing(m.msm)
+            println(io, "Underlying fit")
+            println(io, coeftable(m.ulfit))
+            println(io, "\nMSM")
+        end
+        show(io, m.qgcweights)
         println(io, coeftable(m))
     else
         println(io, "Not fitted")
     end
-
 end
 
 Base.show(m::QGcomp_cox) = Base.show(stdout, m)
@@ -239,12 +246,16 @@ tab = ( in = int, out = out, d=d, x=X[:,1], z1=X[:,2], z2=X[:,3]) ;
 df = DataFrame(tab)
 
 coxph(@formula(Surv(in, out, d)~x+z1+z2), tab, ties = "efron", wts = wt) |> display
-qgcomp_cox_noboot(@formula(Surv(in, out, d)~x+z1+z2), df, ["z1", "z2"], 4) |> display
+m = qgcomp_cox_noboot(@formula(Surv(in, out, d)~x+z1+z2), df, ["z1", "z2"], 4)
 ```
 """
-function qgcomp_cox_noboot(formula, data, expnms, q;kwargs...)
+function qgcomp_cox_noboot(formula, data, expnms, q; kwargs...)
     m = QGcomp_cox(formula, data, expnms, q)
-    fit_noboot!(m;kwargs...)
+    fit_noboot!(m; kwargs...)
+    m.qgcweights.isvalid = checklinearadditive(m.formula.rhs, expnms)
+    if m.qgcweights.isvalid
+        m.qgcweights.neg, m.qgcweights.pos = getweights(coef(m.ulfit), coefnames(m.ulfit), String.(m.expnms))
+    end
     m
 end
 
@@ -275,11 +286,11 @@ qgcomp_cox_boot(rng, @formula(Surv(t, d)~x1+x2+z1+z2+z3), survdata, ["x1", "x2"]
 qgcomp_cox_boot(rng, @formula(Surv(t, d)~x1+x2+x1*x2+z1+z2+z3), survdata, ["x1", "x2"], 4, msmformula=@formula(Surv(t, d)~mixture+mixture^2))
 ```
 """
-function qgcomp_cox_boot(rng, formula, data, expnms, q;kwargs...)
+function qgcomp_cox_boot(rng, formula, data, expnms, q; kwargs...)
     m = QGcomp_cox(formula, data, expnms, q)
-    fit_boot!(rng, m;kwargs...)
+    fit_boot!(rng, m; kwargs...)
     m
 end
 
-qgcomp_cox_boot(formula, data, expnms, q;kwargs...) = qgcomp_cox_boot(Xoshiro(), formula, data, expnms, q;kwargs...)
+qgcomp_cox_boot(formula, data, expnms, q; kwargs...) = qgcomp_cox_boot(Xoshiro(), formula, data, expnms, q; kwargs...)
 ;

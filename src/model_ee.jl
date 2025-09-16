@@ -8,14 +8,20 @@
 ####################################################################################
 
 
-function QGcomp_ee(formula, data, expnms::Vector{Symbol}, q, family, breaks, intvals, fullfit, ulfit, fit, fitted, bootstrap, id)
-    QGcomp_ee(formula, data, String.(expnms), q, family, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
+function QGcomp_ee(formula, data, expnms::Vector{Symbol}, q, family, link, breaks, intvals)
+    QGcomp_ee(formula, data, String.(expnms), q, family, link, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing, QGcomp_weights())
+end
+
+function QGcomp_ee(formula, data, expnms, q, family, link)
+    qdata, breaks, intvals = get_dfq(data, expnms, q)
+    QGcomp_ee(formula, qdata, expnms, q, family, link, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
 end
 
 function QGcomp_ee(formula, data, expnms, q, family)
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_ee(formula, qdata, expnms, q, family, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
+    QGcomp_ee(formula, qdata, expnms, q, family, canonicallink(family))
 end
+
 
 """
 ```julia
@@ -213,6 +219,7 @@ function Base.show(io::IO, m::QGcomp_ee)
     if m.fitted 
         println(io, "Underlying fit")
         println(io, coeftable_eeul(m, limitcond=true))
+        show(io, m.qgcweights)
         println(io, "\nMSM")
         println(io, coeftable(m))
     else

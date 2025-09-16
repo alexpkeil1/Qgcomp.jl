@@ -11,53 +11,58 @@
 ####################################################################################
 
 
-function QGcomp_glm(formula, data, expnms, q, family, breaks)
+function QGcomp_glm(formula, data, expnms, q, family, link, breaks)
     QGcomp_glm(
         formula,
         data,
         String.(expnms),
         q,
         family,
+        link,
         breaks,
         nothing,
         nothing,
         false,
         ID.(collect(1:size(data, 1))),
         nothing,
+        QGcomp_weights()
     )
 end
 
-function QGcomp_glm(formula, data, expnms, q, family)
+function QGcomp_glm(formula, data, expnms, q, family, link)
     qdata, breaks, _ = get_dfq(data, expnms, q)
-    QGcomp_glm(formula, qdata, expnms, q, family, breaks)
+    QGcomp_glm(formula, qdata, expnms, q, family, link, breaks)
 end
 
+
+function QGcomp_glm(formula, data, expnms, q, family)
+    qdata, breaks, _ = get_dfq(data, expnms, q)
+    QGcomp_glm(formula, qdata, expnms, q, family, canonicallink(family))
+end
+
+
+function QgcMSM(msmfit, ypred, msmexposure)
+    QgcMSM(
+        msmfit,
+        ypred,
+        msmexposure,
+        Array{Float64,2}(undef, 0, 0),
+        Array{Float64,2}(undef, 0, 0),
+        Array{Float64,2}(undef, 0, 0),
+        Array{Float64,2}(undef, 0, 0),
+    )
+end
 
 function QgcMSM(msmfit, ypred)
     QgcMSM(
         msmfit,
         ypred,
-        msmfit.mf.data.mixture,
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
-        Array{Float64,2}(undef, 0, 0),
+        Array{Float64,1}(undef, 0),
     )
 end
 
-function QgcMSM(msmfit)
-    QgcMSM(msmfit, Array{Float64,1}(undef, 0))
-end
-
-function QgcMSM()
-    QgcMSM(nothing, Array{Float64,1}(undef, 0))
-end
-
-
-
-
 #=
-```julia
+
 using GLM
 using Qgcomp, DataFrames, StatsModels, Random
 using StatsBase
@@ -69,15 +74,21 @@ data = DataFrame(hcat(y,x,z), [:y, :x1, :x2, :x3, :z1, :z2, :z3])
 formula = @formula(y~x1^2+x2+x3+z1+z2+z3+z3^2)
 expnms = ["x"*string(i) for i in 1:3]
 m = Qgcomp.QGcomp_glm(formula, data, expnms, 4, Normal())
-m.id = ID.(collect(1:size(data, 1)))
+m.id = Qgcomp.ID.(collect(1:size(data, 1)))
 
+fit_noboot! = Qgcomp.fit_noboot!
+_fit_msm = Qgcomp._fit_msm
+QgcMSM = Qgcomp.QgcMSM
+kwargs = Dict(:contrasts => Dict{Symbol,Any}(), :B => 200)
+
+contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}()
 msmformula = @formula(y~1+mixture + mixture^2 + z1)
 fit!(m, bootstrap=true, msmformula = @formula(y~1+mixture + mixture^2 + z1), mcsize=300, B=1000)
 m
-```
 =#
+
 function fit_boot!(rng, m::QGcomp_glm; B::Int64=200, contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(), kwargs...)
-    if !issubset(keys(kwargs), (:mcsize, :iters, :intvals, :msmformula, :degree))
+    if !issubset(keys(kwargs), (:mcsize, :iters, :intvals, :msmformula, :degree, :msmlink, :msmfamily))
         throw(ArgumentError("Qgcomp error: unsupported keyword argument in: $(kwargs...)"))
     end
     ################
@@ -95,7 +106,7 @@ function fit_boot!(rng, m::QGcomp_glm; B::Int64=200, contrasts::Dict{Symbol,<:An
     # msm 
     ################
     if (:msmformula ∉ keys(kwargs)) && (:degree ∉ keys(kwargs))
-        msmformula = m.formula.lhs ~ ConstantTerm(1) + Term(mixture)
+        msmformula = m.formula.lhs ~ ConstantTerm(1) + Term(:mixture)
     elseif (:msmformula ∉ keys(kwargs)) && (:degree ∈ keys(kwargs))
         msmformula = m.formula.lhs ~ degreebuilder("mixture", kwargs[:degree])
     elseif (:msmformula ∈ keys(kwargs)) && (:degree ∉ keys(kwargs))
@@ -104,12 +115,25 @@ function fit_boot!(rng, m::QGcomp_glm; B::Int64=200, contrasts::Dict{Symbol,<:An
         @warn "`msmformula` and `degree` are both specified, but these options both control the same thing. Overriding `degree` and using `msmformula.`"
         msmformula = kwargs[:msmformula]
     end
+
+    if (:msmlink ∈ keys(kwargs)) 
+        msmlink = kwargs[:msmlink]
+    else
+        msmlink = m.link
+    end
+    if (:msmfamily ∈ keys(kwargs)) 
+        msmfamily = kwargs[:msmfamily]
+    else
+        msmfamily = m.family
+    end
+
+
     # sub-sample or over-sample for msm (or just use sample if mcsize is not specified or equals the sample size)
     uid = unique(m.id)
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     msm, ypred, ypredmean =
-        _fit_msm(rng, msmformula, m.data, m.ulfit, m.family, contrasts, m.expnms, intvals, m.id, mcsize)
-    m.msm = QgcMSM(msm, ypred)
+        _fit_msm(rng, msmformula, m.data, m.ulfit, msmfamily, msmlink, contrasts, m.expnms, intvals, m.id, mcsize)
+    m.msm = QgcMSM(msm, ypred, msm.mf.data.mixture)
     ################
     # bootstrapping
     ################
@@ -118,15 +142,7 @@ function fit_boot!(rng, m::QGcomp_glm; B::Int64=200, contrasts::Dict{Symbol,<:An
 
     for iter = 1:B
         bootmsmcoef, bootypredmean = doboot(
-            rng,
-            m.id,
-            m.formula,
-            msmformula,
-            m.data,
-            m.family,
-            m.expnms,
-            intvals;
-            contrasts=contrasts,
+            rng, m.id, m.formula, msmformula, m.data, m.family, m.link, msmfamily, msmlink, m.expnms, intvals; contrasts=contrasts,
             kwargs...,
         )
         m.msm.bootparm_draws[iter, :] = bootmsmcoef
@@ -165,6 +181,9 @@ function doboot(
     msmformula,
     data,
     family,
+    link,
+    msmfamily,
+    msmlink,
     expnms,
     intvals;
     contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}(),
@@ -186,10 +205,10 @@ function doboot(
     #bootids = id[bootidx]
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     # underlying fit
-    ulfit = fit(GeneralizedLinearModel, formula, bootdf, family) # this form needed for proper use of predict function
+    ulfit = fit(GeneralizedLinearModel, formula, bootdf, family, link) # this form needed for proper use of predict function
 
     # msmfit
-    msm, _, ymeanpred = _fit_msm(rng, msmformula, bootdf, ulfit, family, contrasts, expnms, intvals, bootid, mcsize)
+    msm, _, ymeanpred = _fit_msm(rng, msmformula, bootdf, ulfit, msmfamily, msmlink, contrasts, expnms, intvals, bootid, mcsize)
     # output: parameter draws
     coef(msm), ymeanpred
 end
@@ -220,7 +239,7 @@ end
 
 
 
-function _fit_msm(rng, msmformula, data, ulfit, family, contrasts, expnms, intvals, id, mcsize)
+function _fit_msm(rng, msmformula, data, ulfit, family, link, contrasts, expnms, intvals, id, mcsize)
     # modify msm formula to use original exposure
     ff = subformula(msmformula, ["mixture"])
     ff = sublhs(ff, :ypred)
@@ -236,20 +255,20 @@ function _fit_msm(rng, msmformula, data, ulfit, family, contrasts, expnms, intva
     f = apply_schema(ff, sch, GeneralizedLinearModel)
     msmdata.ypred = GLM.predict(ulfit, msmdata) # prediction from original fit with a dataframe works if the original fit was from a formula
     ypred, X = modelcols(f, StatsModels.columntable(msmdata))
-    msm = glm(ff, msmdata, family)
+    msm = glm(ff, msmdata, family, link)
     msm, ypred, [mean(ypred[findall(msmdata.mixture .== iv)]) for iv in intvals]
 end
 
 
 function fit_noboot!(m::QGcomp_glm)
-    m.ulfit, m.fit = _fit_noboot(m.formula, m.data, m.family, m.expnms)
+    m.ulfit, m.fit = _fit_noboot(m.formula, m.data, m.family, m.link, m.expnms)
     m.fitted = true
     nothing
 end
 
 
-function _fit_noboot(formula, data, family, expnms)
-    ulfit = fit(GeneralizedLinearModel, formula, data, family)
+function _fit_noboot(formula, data, family, link, expnms)
+    ulfit = fit(GeneralizedLinearModel, formula, data, family, link)
     coefs = coef(ulfit)
     vcnames = coefnames(ulfit)
     vc = vcov(ulfit)
@@ -261,6 +280,11 @@ function _fit_noboot(formula, data, family, expnms)
 end
 
 
+
+#=
+QGcomp_glm = Qgcomp.QGcomp_glm
+fit! = Qgcomp.fit!
+=#
 """
 ```julia
 using Qgcomp, DataFrames, StatsModels
@@ -287,6 +311,10 @@ loglikelihood(m)
 function qgcomp_glm_noboot(formula, data, expnms, q, family)
     m = QGcomp_glm(formula, data, expnms, q, family)
     fit!(m, bootstrap=false)
+    m.qgcweights.isvalid = checklinearadditive(m.formula.rhs, expnms)
+    if m.qgcweights.isvalid
+        m.qgcweights.neg, m.qgcweights.pos = getweights(coef(m.ulfit), coefnames(m.ulfit), String.(m.expnms))
+    end
     m
 end
 
@@ -357,6 +385,7 @@ function Base.show(io::IO, m::QGcomp_glm)
             println(io, coeftable(m.ulfit))
             println(io, "\nMSM")
         end
+        show(io, m.qgcweights)
         println(io, coeftable(m))
     else
         println(io, "Not fitted")

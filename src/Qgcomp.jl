@@ -3,7 +3,7 @@ using StatsBase
 using GLM
 using DataFrames
 using LinearAlgebra
-using Distributions: Normal, cdf, quantile
+using Distributions: Normal, cdf, quantile, Distribution, ContinuousUnivariateDistribution
 using NLsolve
 using ForwardDiff
 using LSurvival
@@ -57,7 +57,7 @@ export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, q
 export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted
 
 #re-exports
-export Normal, Bernoulli, Poisson
+export Distribution, Normal, Bernoulli, Poisson, Binomial, LogitLink, IdentityLink, NegativeBinomialLink, ProbitLink
 
 
 # Abstract types

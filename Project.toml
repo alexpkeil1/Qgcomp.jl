@@ -1,7 +1,7 @@
 name = "Qgcomp"
 uuid = "0b759ec4-1e0e-48f5-a120-aab12489aed1"
 authors = ["Alex Keil <alexpkeil1@users.noreply.github.com>"]
-version = "0.2.1"
+version = "0.5.0"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

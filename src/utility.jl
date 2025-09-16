@@ -1,6 +1,6 @@
 # utility.jl: utility functions for working with Julia objects
 
-degree_term(t::AbstractTerm, d::ConstantTerm{Int64}) = FunctionTerm(^, [t,d], :($t^$d))
+degree_term(t::AbstractTerm, d::ConstantTerm{Int64}) = FunctionTerm(^, [t, d], :($t^$d))
 
 #=
 degreebuilder("mixture", 4)
@@ -13,6 +13,44 @@ function degreebuilder(var, degree)
     f
 end
 
+#=
+expnms = ["x1", "x3"]
+checklinearadditive(@formula(y~x1+x2+x3+z1+z1^2).rhs, expnms)
+checklinearadditive(@formula(y~x1+x2+x1*x2+x3+z1+z1^2).rhs, expnms)
+checklinearadditive(@formula(y~x1+x2 + x1^2+x3+z1+z1^2).rhs, expnms)
+checklinearadditive(@formula(y~x1+x2 + sqrt(x1)+x3+z1+z1^2).rhs, expnms)
+checklinearadditive(@formula(y~x1+x2 + sqrt(x2)+x3+z1+z1^2).rhs, expnms)
+=#
+
+function getsyms(term::T) where {T<:InteractionTerm}
+    [t.sym for t in terms(term)]
+end
+
+function checklinearadditive(rhs, expnms)
+    nexp = length(unique(expnms))
+    exterm_count = [0]
+    stillvalid = [true]
+    for t in rhs
+        if hasfield(typeof(t), :sym)
+            exterm_count .+= Int(t.sym ∈ expnms)
+            exterm_count[1] > nexp && return(false)
+        elseif typeof(t)<:InteractionTerm
+            syms = getsyms(t)
+            if any([any(syms .== Symbol(ex)) for ex in expnms]) 
+                stillvalid .= false
+            end
+            !stillvalid[1] && return(false)        
+        elseif hasfield(typeof(t), :terms)
+        elseif typeof(t)<:FunctionTerm
+            argy = t.exorig.args
+            if any([any(argy .== Symbol(ex)) for ex in expnms]) 
+                stillvalid .= false
+            end
+            !stillvalid[1] && return(false)
+        end
+    end
+    true
+end
 
 function subterm!(rhs, idx, t, expnms)
     if typeof(t) <: Term
@@ -48,7 +86,7 @@ end
 function sublhs_surv(f, symb)
     lhs = f.lhs
     lhs.args[end] = typeof(lhs.args[end])(symb)
-    lhs.exorig.args[end]  = typeof(lhs.exorig.args[end])(symb)
+    lhs.exorig.args[end] = typeof(lhs.exorig.args[end])(symb)
     FormulaTerm(lhs, f.rhs)
 end
 
@@ -56,8 +94,8 @@ function sublhs_surv(f, symbout, simbd)
     lhs = f.lhs
     lhs.args[end-1] = typeof(lhs.args[end])(symbout)
     lhs.args[end] = typeof(lhs.args[end])(simbd)
-    lhs.exorig.args[end-1]  = typeof(lhs.exorig.args[end-1])(symbout)
-    lhs.exorig.args[end]  = typeof(lhs.exorig.args[end])(simbd)
+    lhs.exorig.args[end-1] = typeof(lhs.exorig.args[end-1])(symbout)
+    lhs.exorig.args[end] = typeof(lhs.exorig.args[end])(simbd)
     FormulaTerm(lhs, f.rhs)
 end
 
@@ -76,5 +114,5 @@ function msmcoxcheck(y::Y) where {Y<:LSurvival.AbstractLSurvivalResp}
     Note: If you have late entry and omit <enter time> to avoid this error message, 
     you will have bias in your estimates.
     "
-    @assert allequal(y.enter) 
+    @assert allequal(y.enter)
 end

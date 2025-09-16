@@ -14,6 +14,7 @@ for f in (
     :response,
     :modelmatrix,
     :hasintercept,
+    :canonicallink,
 )
     @eval begin
         GLM.$f(m::QGcomp_glm) = GLM.$f(m.ulfit)
