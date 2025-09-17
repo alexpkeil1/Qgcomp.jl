@@ -45,8 +45,7 @@ import StatsBase:
     weights
 
 #types
-export QGcomp_model
-
+export QGcomp_model, QGcomp_weights, Qgcomp_MSM, QGcomp_glm, QGcomp_ee, QGcomp_cox
 
 # original functions
 export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, qgcomp_glm_ee
@@ -58,7 +57,8 @@ export ID, genxq
 export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted
 
 #re-exports
-export Distribution, Normal, Bernoulli, Poisson, Binomial, LogitLink, IdentityLink, NegativeBinomialLink, ProbitLink
+export Distribution, Normal, Bernoulli, Poisson, Binomial, LogitLink, IdentityLink, NegativeBinomialLink, ProbitLink, 
+        @formula, FormulaTerm, Term, InteractionTerm, FunctionTerm
 
 
 # Abstract types

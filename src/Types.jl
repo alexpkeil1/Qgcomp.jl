@@ -2,7 +2,7 @@
 
 
 abstract type AbstractID end
-abstract type AbstractQgcMSM end
+abstract type AbstractQgcomp_MSM end
 abstract type QGcomp_model <: RegressionModel end
 abstract type QGcomp_abstractweights end
 
@@ -18,13 +18,13 @@ mutable struct QGcomp_weights{N<:DataFrame,P<:DataFrame,V<:Bool} <: QGcomp_abstr
 end
 
 
-mutable struct QgcMSM{
+mutable struct Qgcomp_MSM{
     F<:RegressionModel,
     D<:Array{Float64,2},
     V<:Array{Float64,2},
     D2<:Array{Float64,2},
     V2<:Array{Float64,2},
-} <: AbstractQgcMSM
+} <: AbstractQgcomp_MSM
     msmfit::F
     ypred::Vector
     intval::Vector{Float64}

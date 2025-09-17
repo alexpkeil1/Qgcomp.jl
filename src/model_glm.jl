@@ -41,8 +41,8 @@ function QGcomp_glm(formula, data, expnms, q, family)
 end
 
 
-function QgcMSM(msmfit, ypred, msmexposure)
-    QgcMSM(
+function Qgcomp_MSM(msmfit, ypred, msmexposure)
+    Qgcomp_MSM(
         msmfit,
         ypred,
         msmexposure,
@@ -53,8 +53,8 @@ function QgcMSM(msmfit, ypred, msmexposure)
     )
 end
 
-function QgcMSM(msmfit, ypred)
-    QgcMSM(
+function Qgcomp_MSM(msmfit, ypred)
+    Qgcomp_MSM(
         msmfit,
         ypred,
         Array{Float64,1}(undef, 0),
@@ -78,7 +78,7 @@ m.id = Qgcomp.ID.(collect(1:size(data, 1)))
 
 fit_noboot! = Qgcomp.fit_noboot!
 _fit_msm = Qgcomp._fit_msm
-QgcMSM = Qgcomp.QgcMSM
+Qgcomp_MSM = Qgcomp.Qgcomp_MSM
 kwargs = Dict(:contrasts => Dict{Symbol,Any}(), :B => 200)
 
 contrasts::Dict{Symbol,<:Any}=Dict{Symbol,Any}()
@@ -133,7 +133,7 @@ function fit_boot!(rng, m::QGcomp_glm; B::Int64=200, contrasts::Dict{Symbol,<:An
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     msm, ypred, ypredmean =
         _fit_msm(rng, msmformula, m.data, m.ulfit, msmfamily, msmlink, contrasts, m.expnms, intvals, m.id, mcsize)
-    m.msm = QgcMSM(msm, ypred, msm.mf.data.mixture)
+    m.msm = Qgcomp_MSM(msm, ypred, msm.mf.data.mixture)
     ################
     # bootstrapping
     ################

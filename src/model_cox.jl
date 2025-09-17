@@ -143,7 +143,7 @@ function fit_boot!(rng, m::QGcomp_cox; B::Int64 = 200, contrasts::Dict{Symbol,<:
     #### identical to glm up to this point
     msm, dpred, dpredmean = _fit_msm_cox(rng, msmformula, m.data, m.ulfit, contrasts, m.expnms, intvals, m.id, mcsize)
 
-    m.msm = QgcMSM(msm, dpred, reduce(vcat, [fill(iv, mcsize) for iv in intvals]))
+    m.msm = Qgcomp_MSM(msm, dpred, reduce(vcat, [fill(iv, mcsize) for iv in intvals]))
     ################
     # bootstrapping
     ################

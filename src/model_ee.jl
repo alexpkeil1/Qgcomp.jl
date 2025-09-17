@@ -8,13 +8,13 @@
 ####################################################################################
 
 
-function QGcomp_ee(formula, data, expnms::Vector{Symbol}, q, family, link, breaks, intvals)
+function QGcomp_ee(formula, data, expnms, q, family, link, breaks, intvals)
     QGcomp_ee(formula, data, String.(expnms), q, family, link, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing, QGcomp_weights())
 end
 
 function QGcomp_ee(formula, data, expnms, q, family, link)
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_ee(formula, qdata, expnms, q, family, link, breaks, intvals, nothing, nothing, nothing, false, nothing, nothing)
+    QGcomp_ee(formula, qdata, expnms, q, family, link, breaks, intvals)
 end
 
 function QGcomp_ee(formula, data, expnms, q, family)

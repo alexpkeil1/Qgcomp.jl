@@ -16,7 +16,7 @@ Modules = [Qgcomp]
 Pages = [
     "glm.md"
     ]
-    Depth = 3
+    Depth = 4
 ```
 
 # References
