@@ -491,16 +491,15 @@ Note that the underlying regression model is on the exposure quantile "scores", 
 the quantile score is translated into a quantile (range = [0-1]). This is not a perfect correspondence, 
 because the quantile g-computation model treats the  quantile score as a continuous variable, but the each quantile category spans a range of quantiles. For visualization, we fix the ends of the plot at the mid-points of the first and last quantile cut-point, so the range of the plot will change slightly if "q" is changed.
 
-```{r adj4cov-a, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
+```julia
 
-qc.fit3 = qgcomp_glm_noboot(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
+qc_fit3 = qgcomp_glm_noboot(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
-                           mercury + selenium + silver + sodium + zinc,
-                         expnms=Xnm,
-                         metals, family=gaussian(), q=4)
-qc.fit3
-
-plot(qc.fit3)
+                           mercury + selenium + silver + sodium + zinc),
+                         metals, Xnm, 4, Normal())
+qc_fit3
+# not yet implemented in Julia
+#plot(qc_fit3)
 
 ```
 
@@ -525,27 +524,24 @@ because the overall "mixture" effect is positive. Thus, the shading allows one
 to make informal comparisons across the left and right sides: a large, darkly
 shaded bar indicates a larger independent effect than a large, lightly shaded bar.
 
-```{r adj4cov-b, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
-qcboot.fit3 = qgcomp_glm_boot(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
+```julia
+qcboot_fit3 = qgcomp_glm_boot(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
-                           mercury + selenium + silver + sodium + zinc,
-                         expnms=Xnm,
-                         metals, family=gaussian(), q=4, B=10,# B should be 200-500+ in practice
-                         seed=125)
-qcboot.fit3
-qcee.fit3 = qgcomp_glm_ee(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
+                           mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal(), 
+                           B=10)# B should be 200-500+ in practice
+qcboot_fit3
+qcee_fit3 = qgcomp_glm_ee(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
-                           mercury + selenium + silver + sodium + zinc,
-                         expnms=Xnm,
-                         metals, family=gaussian(), q=4)
-qcee.fit3
+                           mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal())
+qcee_fit3
 ```
 
 We can change the referent category for pointwise comparisons via the `pointwiseref` parameter:
-```{r adj4cov-c, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
-qgcomp:::modelbound.ee(qcee.fit3)
-plot(qcee.fit3, pointwiseref = 3, flexfit = FALSE, modelbound=TRUE)
-plot(qcboot.fit3, pointwiseref = 3, flexfit = FALSE)
+```julia
+# not yet implemented in Julia
+#qgcomp:::modelbound.ee(qcee_fit3)
+#plot(qcee_fit3, pointwiseref = 3, flexfit = FALSE, modelbound=TRUE)
+#plot(qcboot_fit3, pointwiseref = 3, flexfit = FALSE)
 ```
 
 
@@ -554,15 +550,16 @@ linearity of the total exposure effect (the second plot). Similar output is avai
 for WQS (`gWQS` package), though WQS results will generally be less interpretable
 when exposure effects are non-linear (see below how to do this with `qgcomp_glm_boot` and `qgcomp_glm_ee`). 
 
-The plot for the `qcboot.fit3` object (using g-computation with bootstrap variance) 
+The plot for the `qcboot_fit3` object (using g-computation with bootstrap variance) 
 gives predictions at the joint intervention levels of exposure. It also displays
 a smoothed (graphical) fit. 
 
 Note that the uncertainty intervals given in the plot are directly accessible via the `pointwisebound` (pointwise comparison confidence intervals) and `modelbound` functions (confidence interval for the regression line):
 
-```{r adj4cov-d, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
-pointwisebound.boot(qcboot.fit3, pointwiseref=3)
-qgcomp:::modelbound.boot(qcboot.fit3)
+```julia
+# not yet implemented in julia
+#pointwisebound.boot(qcboot_fit3, pointwiseref=3)
+#qgcomp:::modelbound.boot(qcboot_fit3)
 ```
 
 Because qgcomp estimates a joint effect of multiple exposures, we cannot, in general, assess model fit by overlaying predictions from the plots above with the data. Hence, it is useful to explore non-linearity by fitting models that
@@ -585,12 +582,20 @@ Note that both `qgcomp.*.boot` (bootstrap) and `qgcomp.*.ee` (estimating equatio
 
 Below, we demonstrate a non-linear conditional fit (with a linear MSM) using the bootstrap approach. Similar approaches could be used to include interaction terms between exposures, as well as between exposures and covariates. Note this example is purposefully done incorrectly, as explained below.
 
-```{r n-lin-non-hom-intro, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
+```julia
+f = @formula(y~1+a^2)
+# create squared terms for all exposures
+main_terms = GLM.Term.(Symbol.(Xnm))
+squared_terms = [FunctionTerm(^, [Term(Symbol(xnmi)),ConstantTerm(2)], Expr(:call, :^, Symbol(xnmi), 2)) for xnmi in Xnm]
 
-qcboot.fit4 = qgcomp(y~. + .^2,
+#ff = FormulaTerm(f.lhs, (main_terms...,)..., (squared_terms...,)...)
+
+
+
+qcboot_fit4 = qgcomp(y~. + .^2,
                          expnms=Xnm,
                          metals[,c(Xnm, "y")], family=gaussian(), q=4, B=10, seed=125)
-plot(qcboot.fit4)
+plot(qcboot_fit4)
 ```
 
 Note that allowing for a non-linear effect of all exposures induces an apparent 
@@ -602,25 +607,25 @@ as follows:
 
 ```{r ovrl-n-lin, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
 
-qcboot.fit5 = qgcomp(y~. + .^2,
+qcboot_fit5 = qgcomp(y~. + .^2,
                          expnms=Xnm,
                          metals[,c(Xnm, "y")], family=gaussian(), q=4, degree=2, 
                       B=10, rr=FALSE, seed=125)
-plot(qcboot.fit5)
-qcee.fit5b = qgcomp_glm_ee(y~. + .^2,
+plot(qcboot_fit5)
+qcee_fit5b = qgcomp_glm_ee(y~. + .^2,
                          expnms=Xnm,
                          metals[,c(Xnm, "y")], family=gaussian(), q=4, degree=2, 
                          rr=FALSE)
-plot(qcee.fit5b)
+plot(qcee_fit5b)
 ```
 
 Note that some features are not availble to ` qgcomp.* .ee` methods, which use estimating equations, rather than maximum likelihood methods. Briefly, these allow assessment of uncertainty under n-lin (and other) scenarios where the ` qgcomp.* .noboot` functions cannot, since they rely on the additivity and linearity assumptions to achieve speed. The ` qgcomp.* .ee` methods will generally be faster than a bootstrapped version, but they are not used extensively here because they are the newest additions to the qgcomp package, and the bootstrapped versions can be made fast (but not accurate) by reducing the number of bootstraps. Where available, the ` qgcomp.* .ee` will be preferred to the ` qgcomp.* .boot` versions for more stable and faster analyses when bootstrapping would otherwise be necessary.
 
 Once again, we can access numerical estimates of uncertainty (answers differ between the `qgcomp.*.boot` and `qgcomp.*.ee` fits due to the small number of bootstrap samples):
 ```{r ovrl-n-linb, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
-modelbound.boot(qcboot.fit5)
-pointwisebound.boot(qcboot.fit5)
-pointwisebound.noboot(qcee.fit5b)
+modelbound.boot(qcboot_fit5)
+pointwisebound.boot(qcboot_fit5)
+pointwisebound.noboot(qcee_fit5b)
 ```
 
 Ideally, the smooth fit will look very similar to the model prediction regression 
@@ -629,12 +634,11 @@ line.
 #### Interpretation of model parameters
 
 As the output below shows, setting "degree=2" yields a second parameter in the model fit ($\psi_2$). The output of qgcomp now corresponds to estimates of the marginal structural model given by 
-$$
-\mathbb{E}\left(Y^{\mathbf{X}_q}\right) = g(\psi_0 + \psi_1 S_q + \psi_2 S_q^2)
-$$
 
-```{r ovrl-n-lin-psi interp, results="markup", fig.show="hold", fig.height=5, fig.width=7.5, cache=FALSE}
-qcboot.fit5
+$\mathbb{E}\left(Y^{\mathbf{X}_q}\right) = g(\psi_0 + \psi_1 S_q + \psi_2 S_q^2)$
+
+```julia
+qcboot_fit5
 ```
 
 
