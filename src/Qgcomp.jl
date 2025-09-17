@@ -10,9 +10,7 @@ using LSurvival
 import Random: AbstractRNG, Xoshiro, MersenneTwister
 
 # imports
-import StatsModels:
-    hasintercept,
-    drop_intercept
+import StatsModels: hasintercept, drop_intercept
 
 import StatsBase:
     aic,
@@ -51,7 +49,10 @@ export QGcomp_model
 
 
 # original functions
-export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, qgcomp_glm_ee, ID
+export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, qgcomp_glm_ee
+
+# original utility functions
+export ID, genxq
 
 #expanded functions from imports
 export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted
@@ -67,6 +68,7 @@ include("Types.jl")
 include("base.jl")
 include("utility.jl")
 include("sampling.jl")
+include("simulation_helpers.jl")
 
 # re-exports
 include("statsbase.jl")

@@ -171,6 +171,7 @@ function getweights(coefs, coefnames_, expnms)
         df = DataFrame(exposure = partialnames[i], coef = outcoefs[i], weight = weights[i])
         df.ψ_partial .= partials[i]
         df[:, ["exposure", "coef", "ψ_partial", "weight"]]
+        sort!(df, :weight)
     end, 1:2)
 end
 
