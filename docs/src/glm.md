@@ -555,11 +555,10 @@ function powerterm(x::S,power::I) where {S<:AbstractString, I<:Int}
 end
 squared_terms = powerterm.(Xnm, 2)
 
-# use ... "splatting" to combine
+# use ... "splatting" to combine all terms into a tuple
 rhs = (vcat(main_terms, squared_terms)...,)
 
-ffsq = FormulaTerm(lhs, rhs)
-
+ffsq = FormulaTerm(lhs, rhs) # this is a shorthand way of constructing the same object you would get from  @formula(y~ x1 + x1^2 + x2 + x2^2 + ...)
 
 
 qcboot_fit4 = qgcomp_glm_boot(ffsq, metals, Xnm, 4, Normal(), B=10)
