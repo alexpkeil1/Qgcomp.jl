@@ -17,7 +17,6 @@ mutable struct QGcomp_weights{N<:DataFrame,P<:DataFrame,V<:Bool} <: QGcomp_abstr
     isvalid::V
 end
 
-
 mutable struct Qgcomp_EEmsm <: RegressionModel
     coef_vcov::Tuple{Vector,Matrix}
     coef::Vector

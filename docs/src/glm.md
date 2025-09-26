@@ -181,7 +181,7 @@ qcboot_fit2 = qgcomp_glm_boot(ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, 
 qcboot_fit2b = qgcomp_glm_boot(ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial(), B=10, msmlink=LogLink())
 ```
 
-Compare a qgcomp_glm_noboot fit:
+Compare a `qgcomp_glm_noboot` fit:
 ```@example metals
 qc_fit2
 ```
@@ -197,7 +197,6 @@ with a qgcomp_glm_boot fit, where the risk/prevalence ratio is estimated, rather
 qcboot_fit2b
 ```
 
-### The remainder of this document IN PROGRESS
 ### Example 3: adjusting for covariates, plotting estimates
 
 In the following code we run a maternal age-adjusted linear model with `qgcomp` (`family = Normal()`). Further, we plot both the weights, as well as the mixture slope which yields overall model confidence bounds, representing the bounds that, for each value of the joint exposure are expected to contain the true regression line over 95% of trials (so-called 95% "pointwise" bounds for the regression line). The pointwise comparison bounds, denoted by error bars on the plot, represent comparisons of the expected difference in outcomes at each quantile, with reference  to a specific quantile (which can be specified by the user, as below). These pointwise bounds are similar to the bounds created in the bkmr package when plotting the overall effect of all exposures. The pointwise bounds can be obtained via the pointwisebound.boot function. To avoid confusion between "pointwise regression" and "pointwise comparison" bounds, the pointwise regression bounds are denoted as the "model confidence band" in the plots, since they yield estimates of the same type of bounds as the `predict` function in R when applied to linear model fits.
@@ -211,9 +210,12 @@ qc_fit3 = qgcomp_glm_noboot(@formula(y ~ mage35 + arsenic + barium + cadmium + c
                            mercury + selenium + silver + sodium + zinc),
                          metals, Xnm, 4, Normal())
 println(qc_fit3)
-
+```
+```@example metals
 weightplot(qc_fit3) 
 ```
+
+
 
 
 From the first plot we see weights from `qgcomp_glm_noboot` function, which include both positive and negative effect directions. When the weights are all on a single side of the null, these plots are easy to in interpret since the weight corresponds to the proportion of the overall effect from each exposure. WQS uses a constraint in the model to force all of the weights to be in the same direction - unfortunately such constraints lead to biased effect estimates. The `qgcomp` package takes a different approach and allows that "weights" might go in either direction, indicating that some exposures may beneficial, and some harmful, or there may be sampling variation due to using small or moderate sample sizes (or, more often, systematic bias such as unmeasured confounding). The "weights" in `qgcomp` correspond to the proportion of the overall effect when all of the exposures have effects in the same direction, but otherwise they correspond to the proportion of the effect *in a particular direction*, which may be small (or large) compared to the overall "mixture" effect. NOTE: the left and right sides of the  plot should not be compared with each other because the 
@@ -225,6 +227,8 @@ qcboot_fit3 = qgcomp_glm_boot(@formula(y ~ mage35 + arsenic + barium + cadmium +
                            mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal(), 
                            B=50)# B should be 200-500+ in practice
 println(qcboot_fit3)
+```
+```@example metals
 qcee_fit3 = qgcomp_glm_ee(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
                            mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal())
@@ -234,9 +238,15 @@ println(qcee_fit3)
 
 We can change the referent category for pointwise comparisons via the `referentindex` parameter:
 ```@example metals
-bounds(qcee_fit3)
-bounds(qcboot_fit3)
+printbounds(bounds(qcee_fit3))
+```
+```@example metals
+printbounds(bounds(qcboot_fit3))
+```
+```@example metals
 responseplot(qcee_fit3, referentindex = 3, plots=["pointwise", "model"]) 
+```
+```@example metals
 responseplot(qcboot_fit3, referentindex = 3, plots=["pointwise", "model"]) 
 ```
 
@@ -248,23 +258,25 @@ The plot for the `qcboot_fit3` object (using g-computation with bootstrap varian
 Note that the uncertainty intervals given in the plot are directly accessible via the `pointwisebound` (pointwise comparison confidence intervals) and `modelbound` functions (confidence interval for the regression line):
 
 ```@example metals
-bounds(qcee_fit3, qcee_fit3.intvals, qcee_fit3.intvals[3])
-bounds(qcboot_fit3)
+printbounds(bounds(qcee_fit3, qcee_fit3.intvals, qcee_fit3.intvals[3]))
+```
+```@example metals
+printbounds(bounds(qcboot_fit3))
 ```
 
 Because qgcomp estimates a joint effect of multiple exposures, we cannot, in general, assess model fit by overlaying predictions from the plots above with the data. Hence, it is useful to explore non-linearity by fitting models that allow for non-linear effects, as in the next example.
 
 
-### Example 4: non-linearity (and non-homogeneity)<a name="ex-nonlin"></a>
+### Example 4: non-linearity (and non-homogeneity)
 
-`qgcomp` (specifically `qgcomp.*.boot` and `qgcomp.*.ee` methods) addresses non-linearity in a way similar to standard parametric regression models, which lends itself to being able to leverage R language features for n-lin parametric models (or, more precisely, parametric models that deviate from a purely additive, linear function on the link function basis via the use of basis function representation of non-linear functions). 
+`qgcomp` (specifically `qgcomp_*_boot` and `qgcomp_*_ee` methods) addresses non-linearity in a way similar to standard parametric regression models, which lends itself to being able to leverage R language features for n-lin parametric models (or, more precisely, parametric models that deviate from a purely additive, linear function on the link function basis via the use of basis function representation of non-linear functions). 
 Here is an example where we use a feature of the R language for fitting models with interaction terms. We use `y~. + .^2` as the model formula, which fits a model that allows for quadratic term for every predictor in the model. 
 
 
 
 #### Aside: some details on qgcomp methods for non-linearity
 
-Note that both `qgcomp.*.boot` (bootstrap) and `qgcomp.*.ee` (estimating equations) use standard methods for g-computation, whereas the `qgcomp.*.noboot` methods use a fast algorithm that works under the assumption of linearity and additivity of exposures (as described in the original paper on quantile-based g-computation). The "standard" method of g-computation with time-fixed exposures involves first fitting conditional models for the outcome, making predictions from those models under set exposure values, and then summarizing the predicted outcome distribution, possibly by fitting a second (marginal structural) model. `qgcomp.*.boot` follows this three-step process, while `qgcomp.*.ee` leverages estimating equations (sometimes: M-estimation) to estimate the parameters of the conditional and marginal structural model simultaneously. `qgcomp.*.ee` uses a sandwich variance estimator, which is similar to GEE (generalized estimating equation) approaches, and thus, when used correctly, can yield inference for longitudinal data in the same way that GEE does. The bootstrapping approach can also do this, but it takes longer. The extension to longitudinal data is representative of the broader concept that `qgcomp.*.boot` and `qgcomp.*.ee` can be used in a broader number of settings than `qgcomp.*.noboot` algorithms, but if one assumes linearity and additivity with no clustering of observations, and conditional parameters are of interest, then they are just a slower way to get equivalent results to `qgcomp.*.noboot`.
+Note that both `qgcomp_*_boot` (bootstrap) and `qgcomp_*_ee` (estimating equations) use standard methods for g-computation, whereas the `qgcomp_*_noboot` methods use a fast algorithm that works under the assumption of linearity and additivity of exposures (as described in the original paper on quantile-based g-computation). The "standard" method of g-computation with time-fixed exposures involves first fitting conditional models for the outcome, making predictions from those models under set exposure values, and then summarizing the predicted outcome distribution, possibly by fitting a second (marginal structural) model. `qgcomp_*_boot` follows this three-step process, while `qgcomp_*_ee` leverages estimating equations (sometimes: M-estimation) to estimate the parameters of the conditional and marginal structural model simultaneously. `qgcomp_*_ee` uses a sandwich variance estimator, which is similar to GEE (generalized estimating equation) approaches, and thus, when used correctly, can yield inference for longitudinal data in the same way that GEE does. The bootstrapping approach can also do this, but it takes longer. The extension to longitudinal data is representative of the broader concept that `qgcomp_*_boot` and `qgcomp_*_ee` can be used in a broader number of settings than `qgcomp_*_noboot` algorithms, but if one assumes linearity and additivity with no clustering of observations, and conditional parameters are of interest, then they are just a slower way to get equivalent results to `qgcomp_*_noboot`.
 
 
 Below, we demonstrate a non-linear conditional fit (with a linear MSM) using the bootstrap approach. Similar approaches could be used to include interaction terms between exposures, as well as between exposures and covariates. Note this example is purposefully done incorrectly, as explained below.
@@ -289,6 +301,8 @@ ffsq = FormulaTerm(lhs, rhs) # this is a shorthand way of constructing the same 
 
 qcboot_fit4 = qgcomp_glm_boot(rng, ffsq, metals, Xnm, 4, Normal(), B=100) 
 println(qcboot_fit4)
+```
+```@example metals
 responseplot(qcboot_fit4, plots=["pointwise", "model"]) 
 ```
 
@@ -303,18 +317,22 @@ as follows:
 
 qcboot_fit5 = qgcomp_glm_boot(ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) # directly specify MSM formula
 responseplot(qcboot_fit5) 
+```
+```@example metals
 qcee_fit5b = qgcomp_glm_ee(ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) #Using estimating equations
 responseplot(qcee_fit5b) 
 ```
 
 Note that some features are not availble to ` qgcomp_*_ee` methods, which use estimating equations, rather than maximum likelihood methods. Briefly, these allow assessment of uncertainty under n-lin (and other) scenarios where the ` qgcomp_*_noboot` functions cannot, since they rely on the additivity and linearity assumptions to achieve speed. The ` qgcomp_*_ee` methods will generally be faster than a bootstrapped version, but they are not used extensively here because they are the newest additions to the qgcomp package, and the bootstrapped versions can be made fast (but not accurate) by reducing the number of bootstraps. Where available, the ` qgcomp_*_ee` will be preferred to the ` qgcomp_*_boot` versions for more stable and faster analyses when bootstrapping would otherwise be necessary.
 
-Once again, we can access numerical estimates of uncertainty (answers differ between the `qgcomp.*.boot` and `qgcomp.*.ee` fits due to the small number of bootstrap samples):
+Once again, we can access numerical estimates of uncertainty (answers differ between the `qgcomp_*_boot` and `qgcomp_*_ee` fits due to the small number of bootstrap samples):
 
 ```@example metals
 # not yet implemented
-println(bounds(qcboot_fit5))
-println(bounds(qcee_fit5b))
+printbounds(bounds(qcboot_fit5))
+```
+```@example metals
+printbounds(bounds(qcee_fit5b))
 ```
 
 Ideally, the smooth fit will look very similar to the model prediction regression 
@@ -335,7 +353,7 @@ println(qcboot_fit5)
 so that $\psi_2$ can be interpreted similar to quadratic terms that might appear in a generalized linear model. $\psi_2$ estimates the change in the outcome for an additional unit of squared joint exposure, over-and-above the linear effect given by $\psi_1$. Informally, this is a way of assessing specific types of non-linearity in the joint exposure-response curves, and there are many other (slightly incorrect but intuitively useful) ways of interpreting parameters for squared terms in regressions (beyond the scope of this document). Intuition from generalized linear models (i.e. regarding interpretation of coefficients) applies directly to the models fit by quantile g-computation.
 
 
-### Example 5: comparing model fits and further exploring non-linearity<a name="ex-nonlin2"></a>
+### Example 5: comparing model fits and further exploring non-linearity
 Exploring a non-linear fit in settings with multiple exposures is challenging. One way to explore non-linearity, as demonstrated above, is to to include all 2-way interaction terms (including quadratic terms, or "self-interactions"). Sometimes this approach is not desired, either because the number of terms in the model can become very large, or because some sort of model selection procedure is required, which risks inducing over-fit (biased estimates and standard errors that are too small). Short of having a set of a priori non-linear terms to include, we find it best to take a default approach (e.g. taking all second order terms) that doesn't rely on statistical significance, or to simply be honest that the search for a non-linear model is exploratory and shouldn't be relied upon for robust inference. Methods such as kernel machine regression may be good alternatives, or supplementary approaches to exploring non-linearity.
 
 NOTE: qgcomp necessarily fits a regression model with exposures that have a small number of possible values, based on the quantile chosen. By package default, this is `q=4`, but it is difficult to fully examine non-linear fits using only four points, so we recommend exploring larger values of `q`, which will change effect estimates (i.e. the model coefficient implies a smaller change in exposures, so the expected change in the outcome will also decrease).
@@ -378,14 +396,14 @@ pl_fit6lin = responseplot(qc_fit6lin, referentindex = 4);
 plot!(pl_fit6lin, ylim=(-0.75, .75)) 
 ```
 
-Here"s the non-linear fit :
+Here's the non-linear fit :
 ```{r graf-n-lin-2, results="markup", fig.show="hold", fig.height=3, fig.width=7.5, cache=FALSE}
 pl_fit6nonlin = plot(qc_fit6nonlin, suppressprint = TRUE, referentindex = 4)
 pl_fit6nonlin + coord_cartesian(ylim=c(-0.75, .75)) + 
   ggtitle("Non-linear fit: mixture of iron, lead, and cadmium")
 ```
 
-And here"s the non-linear fit with statistical interaction between exposures (recalling that this will lead to non-linearity in the overall effect):
+And here's the non-linear fit with statistical interaction between exposures (recalling that this will lead to non-linearity in the overall effect):
 ```{r graf-n-lin 3, results="markup", fig.show="hold", fig.height=3, fig.width=7.5, cache=FALSE}
 pl_fit6nonhom = plot(qc_fit6nonhom, suppressprint = TRUE, referentindex = 4)
 pl_fit6nonhom + coord_cartesian(ylim=c(-0.75, .75)) + 
@@ -416,7 +434,7 @@ smoothed conditional fit appear to be overfit. The smooth conditional fit can be
 #responseplot(qc_overfit, referentindex = 5, plots=["pointwise", "model"])
 #```
 
-### Example 6: miscellaneous other ways to allow non-linearity<a name="ex-nonlin3"></a>
+### Example 6: miscellaneous other ways to allow non-linearity
 Note that these are included as examples of *how* to include non-linearities, and are not intended as 
 a demonstration of appropriate model selection. In fact, qc_fit7b is generally a bad idea in small
 to moderate sample sizes due to large numbers of parameters. 
@@ -432,6 +450,8 @@ qc_fit7a = qgcomp_glm_boot(@formula(y ~ iron + lead + cadmium +
                          contrasts = Dict(:iron => DummyCoding()))
 # underlying fit
 println(qc_fit7a.ulfit)
+```
+```@example metals
 responseplot(qc_fit7a)
 ```
 
@@ -448,6 +468,8 @@ qc_fit7b = qgcomp_glm_boot(@formula(y ~ iron*lead + cadmium +
                           #:lead => DummyCoding()
                           )
                           )
+```
+```@example metals
 responseplot(qc_fit7b, plots=["p", "m"])
 ```
 
@@ -462,6 +484,8 @@ qc_fit7c = qgcomp_glm_boot(@formula(y ~ (iron>4)*(lead>4) + cadmium +
 )
 # underlying fit
 qc_fit7c.ulfit
+```
+```@example metals
 responseplot(qc_fit7c)
 ```
 
@@ -475,6 +499,8 @@ println(aic(qc_fit6lin))
 #aic(qc_fit6nonlin) |> display
 #aic(qc_fit6nonhom) |> display
 
+```
+```@example metals
 println(bic(qc_fit6lin))
 #bic(qc_fit6nonlin) |> display
 #bic(qc_fit6nonhom) |> display
@@ -486,9 +512,9 @@ More examples on advanced topics can be viewed in the other package vignette.
 
 ## FAQ
 ### Why don't I get weights/scaled effects from the `boot` or `ee` functions? (and other questions about the weights/scaled effect sizes)
-Users often use the `qgcomp.*.boot` or `qgcomp.*.ee` functions because they want to marginalize over confounders or fit a non-linear joint exposure function. In both cases, the overall exposure response will no longer correspond to a simple weighted average of model coefficients, so none of the `qgcomp.*.boot` or `qgcomp.*.ee` functions will calculate weights. In most use cases, the weights would vary according to which level of joint exposure you"re at, so it is not a straightforward proposition to calculate them (and you may not wish to report 4 sets of weights if you use the default `q=4`). That is, the contribution of each exposure to the overall effect will change across levels of exposure if there is any non-linearity, which makes the weights not useful as simple inferential tools (and, at best, an approximation). If you wish to have an approximation, then use a "noboot" method and report the weights from that along with a caveat that they are not directly applicable to the results in which non-linearity/non-additivity/marginalization-over-covariates is performed (using boot methods). If you fit an otherwise linear model, you can get weights from a `qgcomp.*.noboot` which will be very close to the weights you might get from a linear model fit via `qgcomp.*.boot` functions, but be explicit that the weights come from a different model than the inference about joint exposure effects. 
+Users often use the `qgcomp_*_boot` or `qgcomp_*_ee` functions because they want to marginalize over confounders or fit a non-linear joint exposure function. In both cases, the overall exposure response will no longer correspond to a simple weighted average of model coefficients, so none of the `qgcomp_*_boot` or `qgcomp_*_ee` functions will calculate weights. In most use cases, the weights would vary according to which level of joint exposure you"re at, so it is not a straightforward proposition to calculate them (and you may not wish to report 4 sets of weights if you use the default `q=4`). That is, the contribution of each exposure to the overall effect will change across levels of exposure if there is any non-linearity, which makes the weights not useful as simple inferential tools (and, at best, an approximation). If you wish to have an approximation, then use a "noboot" method and report the weights from that along with a caveat that they are not directly applicable to the results in which non-linearity/non-additivity/marginalization-over-covariates is performed (using boot methods). If you fit an otherwise linear model, you can get weights from a `qgcomp_*_noboot` which will be very close to the weights you might get from a linear model fit via `qgcomp_*_boot` functions, but be explicit that the weights come from a different model than the inference about joint exposure effects. 
 
-It should be emphasized here that the weights are not a stable or entirely useful quantity for many research goals. Qgcomp addresses the mixtures problem of variance inflation by focusing on a parameter that is less susceptible to variance inflation than independent effects (the psi parameters, or overall effects of a mixture). The weights are a form of independent effect and will always be sensitive to this issue, regardless of the statistical method that is used. Some statistical approaches to improving estimation of independent effects (e.g. setting `bayes=TRUE`) is accessible in many qgcomp functions, but these approaches universally introduce bias in exchange for reducing variance and shouldn't be used without a good understanding of what shrinkage and penalization methods actually accomplish. Principled and rigorous integration of these statistical approaches with qgcomp is in progress, but that work is inherently more bespoke and likely will not be available in this R package. The shrinkage and penalization literature is large and outside the scope of this software and documentation, so no other guidance is given here. In any case, the calculated weights are only interpretable as proportional effect sizes in a setting in which there is linearity, additivity, and collapsibility, and so the package makes no efforts to try to introduce weights into other settings in which those assumptions may not be met. Outside of those narrow settings, the weights would have a dubious interpretation and the programming underlying the qgcomp package errs on the side of preventing the reporting of results that are mutually inconsistent. If you are using the `boot` versions of a qgcomp function in a setting in which you know that the weights are valid, it is very likely that you do not actually need to be using the `boot` versions of the functions.
+It should be emphasized here that the weights are not a stable or entirely useful quantity for many research goals. Qgcomp addresses the mixtures problem of variance inflation by focusing on a parameter that is less susceptible to variance inflation than independent effects (the psi parameters, or overall effects of a mixture). The weights are a form of independent effect and will always be sensitive to this issue, regardless of the statistical method that is used. Some statistical approaches to improving estimation of independent effects (e.g. setting `bayes=TRUE`, R package only) is accessible in many qgcomp functions, but these approaches universally introduce bias in exchange for reducing variance and shouldn't be used without a good understanding of what shrinkage and penalization methods actually accomplish. Principled and rigorous integration of these statistical approaches with qgcomp is in progress, but that work is inherently more bespoke and likely will not be available in this R package. The shrinkage and penalization literature is large and outside the scope of this software and documentation, so no other guidance is given here. In any case, the calculated weights are only interpretable as proportional effect sizes in a setting in which there is linearity, additivity, and collapsibility, and so the package makes no efforts to try to introduce weights into other settings in which those assumptions may not be met. Outside of those narrow settings, the weights would have a dubious interpretation and the programming underlying the qgcomp package errs on the side of preventing the reporting of results that are mutually inconsistent. If you are using the `boot` versions of a qgcomp function in a setting in which you know that the weights are valid, it is very likely that you do not actually need to be using the `boot` versions of the functions.
 
 ### Do I need to model non-linearity and non-additivity of exposures?
 Maybe. The inferential object of qgcomp is the set of $\psi$ parameters that correspond to a joint exposure response. As it turns out, with correlated exposures non-linearity can disguise itself as non-additivity (Belzak and Bauer [2019] Addictive Behaviors). If we were inferring independent effects, this distinction would be crucial, but for joint effects it may turn out that it doesn't matter much if you model non-linearity in the joint response function through non-additivity or non-linearity of individual exposures in a given study. Models fit in qgcomp still make the crucial assumption that you are able to model the joint exposure response via parametric models, so that assumption should not be forgotten in an effort to try to disentagle non-linearity (e.g. quadratic terms of exposures) from non-additivity (e.g. product terms between exposures). The important part to note about parametric modeling is that we have to explicitly tell the model to be non-linear, and no adaptation to non-linear settings will happen automatically. Exploring non-linearity is not a trivial endeavor.
@@ -500,5 +526,5 @@ No. You can turn off "quantization" by setting `q=nothing` or you can supply you
 Probably not in a scientific manuscript. If you find an idea here that is not published anywhere else and wish to develop it into a full manuscript, feel free! (But probably check with alex.keil@nih.gov to ask if a paper is already in development or is, perhaps, already published.)
 
 ### Where else can I get help?
-The vignettes of the package and the help files of the functions give many, many examples of usage. Additionally, some edge case or interesting applicationsare available in the form of github gists at <https://gist.github.com/alexpkeil1>. If you come up with an interesting problem that you think could be solved in this package, but is currently not, feel free to submit an issue on the R package github page <https://github.com/alexpkeil1/qgcomp/issues>. Several additions to the package have already come about through that avenue (though not always quickly).
+The vignettes of the package and the help files of the functions give many, many examples of usage. Additionally, some edge case or interesting applicationsare available in the form of github gists at <https://gist.github.com/alexpkeil1>. If you come up with an interesting problem that you think could be solved in this package, but is currently not, feel free to submit an issue on the R package github page <https://github.com/alexpkeil1/qgcomp/issues> or J package github page <https://github.com/alexpkeil1/Qgcomp.jl/issues>. Several additions to the R package have already come about through that avenue (though not always quickly).
 

@@ -63,7 +63,7 @@ export QGcomp_model, QGcomp_weights, Qgcomp_MSM, QGcomp_glm, QGcomp_ee, QGcomp_c
 export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, qgcomp_glm_ee
 
 # original summary functions
-export bounds
+export bounds, printbounds
 
 # original utility functions
 export ID, genxq, vccomb
