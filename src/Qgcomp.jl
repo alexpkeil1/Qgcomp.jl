@@ -72,7 +72,7 @@ export ID, genxq, vccomb
 export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted, coef, vcov
 
 #re-exports, functions
-export ordinalrank
+export diag, ordinalrank, DummyCoding, HelmertCoding, EffectsCoding, HypothesisCoding, SeqDiffCoding
 
 #re-exports, types
 export Distribution,
