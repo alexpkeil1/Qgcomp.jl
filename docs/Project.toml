@@ -1,7 +1,9 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
+GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 LSurvival = "edbbf5c1-874b-40a5-8c9f-d8fc918aacaa"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Qgcomp = "0b759ec4-1e0e-48f5-a120-aab12489aed1"
 RData = "df47a6cb-8c03-5eed-afd8-b6050d6c41da"
 Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
