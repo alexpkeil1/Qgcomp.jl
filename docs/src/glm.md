@@ -51,11 +51,10 @@ end
     lindata = DataFrame(hcat(y, X), [:y, :x1, :x2, :x3])
 
     # check correlations
-    cor(Xq) |> display
+    println(cor(Xq))
 
     # fit model
-    qgcomp_glm_noboot(@formula(y~x1+x2+x3), lindata, ["x1", "x2", "x3"], 4, Normal()) |> display
-
+    qgcomp_glm_noboot(@formula(y~x1+x2+x3), lindata, ["x1", "x2", "x3"], 4, Normal())
 ```
 
 
@@ -82,7 +81,7 @@ using RData
 tf = tempname() * ".RData"
 download("https://github.com/alexpkeil1/qgcomp/raw/refs/heads/main/data/metals.RData", tf)
 metals = load(tf)["metals"]
-metals[1:10,:] |> display
+println(metals[1:10,:])
 
 # we save the names of the mixture variables in the variable "Xnm"
 Xnm = [
@@ -142,7 +141,7 @@ Now let"s take a brief look under the hood. `qgcomp` works in steps. First, the 
 
 ```@example metals
 # quantized data
-qc_fit.data[1:10,:] |> display
+println(qc_fit.data[1:10,:])
 ```
 
 
@@ -152,15 +151,15 @@ You can re-fit a linear model using these quantized exposures. This is the "unde
 newfit = lm(@formula(y ~ arsenic + barium + cadmium + calcium + chromium + copper + 
     iron + lead + magnesium + manganese + mercury + selenium + 
     silver + sodium + zinc), qc_fit.data)
-newfit |> display
+println(newfit)
 ```
 
 
 Here you can see that, *for a GLM in which all quantized exposures enter linearly and additively into the underlying model*, the overall effect from `qgcomp` is simply the sum of the adjusted coefficients from the underlying model. 
 
 ```@example metals
-sum(coef(newfit)[2:end]) |> display # sum of all coefficients excluding intercept and confounders, if any
-qc_fit.fit[1][2]  |> display # overall effect and intercept from qgcomp fit
+println(sum(coef(newfit)[2:end])) # sum of all coefficients excluding intercept and confounders, if any
+println(qc_fit.fit[1][2])   # overall effect and intercept from qgcomp fit
 ```
 
 
@@ -211,9 +210,9 @@ qc_fit3 = qgcomp_glm_noboot(@formula(y ~ mage35 + arsenic + barium + cadmium + c
                            chromium + copper + iron + lead + magnesium + manganese + 
                            mercury + selenium + silver + sodium + zinc),
                          metals, Xnm, 4, Normal())
-qc_fit3 |> display
+println(qc_fit3)
 
-weightplot(qc_fit3) |> display
+weightplot(qc_fit3) 
 ```
 
 
@@ -225,11 +224,11 @@ qcboot_fit3 = qgcomp_glm_boot(@formula(y ~ mage35 + arsenic + barium + cadmium +
                            chromium + copper + iron + lead + magnesium + manganese + 
                            mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal(), 
                            B=50)# B should be 200-500+ in practice
-qcboot_fit3 |> display
+println(qcboot_fit3)
 qcee_fit3 = qgcomp_glm_ee(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
                            mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal())
-qcee_fit3 |> display
+println(qcee_fit3)
 ```
 
 
@@ -237,8 +236,8 @@ We can change the referent category for pointwise comparisons via the `referenti
 ```@example metals
 bounds(qcee_fit3)
 bounds(qcboot_fit3)
-responseplot(qcee_fit3, referentindex = 3, plots=["pointwise", "model"]) |> display
-responseplot(qcboot_fit3, referentindex = 3, plots=["pointwise", "model"]) |> display
+responseplot(qcee_fit3, referentindex = 3, plots=["pointwise", "model"]) 
+responseplot(qcboot_fit3, referentindex = 3, plots=["pointwise", "model"]) 
 ```
 
 
@@ -289,8 +288,8 @@ ffsq = FormulaTerm(lhs, rhs) # this is a shorthand way of constructing the same 
 
 
 qcboot_fit4 = qgcomp_glm_boot(rng, ffsq, metals, Xnm, 4, Normal(), B=100) 
-qcboot_fit4 |> display
-responseplot(qcboot_fit4, plots=["pointwise", "model"]) |> display
+println(qcboot_fit4)
+responseplot(qcboot_fit4, plots=["pointwise", "model"]) 
 ```
 
 
@@ -303,9 +302,9 @@ as follows:
 ```@example metals
 
 qcboot_fit5 = qgcomp_glm_boot(ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) # directly specify MSM formula
-responseplot(qcboot_fit5) |> display
+responseplot(qcboot_fit5) 
 qcee_fit5b = qgcomp_glm_ee(ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) #Using estimating equations
-responseplot(qcee_fit5b) |> display
+responseplot(qcee_fit5b) 
 ```
 
 Note that some features are not availble to ` qgcomp_*_ee` methods, which use estimating equations, rather than maximum likelihood methods. Briefly, these allow assessment of uncertainty under n-lin (and other) scenarios where the ` qgcomp_*_noboot` functions cannot, since they rely on the additivity and linearity assumptions to achieve speed. The ` qgcomp_*_ee` methods will generally be faster than a bootstrapped version, but they are not used extensively here because they are the newest additions to the qgcomp package, and the bootstrapped versions can be made fast (but not accurate) by reducing the number of bootstraps. Where available, the ` qgcomp_*_ee` will be preferred to the ` qgcomp_*_boot` versions for more stable and faster analyses when bootstrapping would otherwise be necessary.
@@ -314,8 +313,8 @@ Once again, we can access numerical estimates of uncertainty (answers differ bet
 
 ```@example metals
 # not yet implemented
-bounds(qcboot_fit5) |> display
-bounds(qcee_fit5b) |> display
+println(bounds(qcboot_fit5))
+println(bounds(qcee_fit5b))
 ```
 
 Ideally, the smooth fit will look very similar to the model prediction regression 
@@ -328,7 +327,7 @@ As the output below shows, setting "degree=2" yields a second parameter in the m
 $\mathbb{E}\left(Y^{\mathbf{X}_q}\right) = g(\psi_0 + \psi_1 S_q + \psi_2 S_q^2)$
 
 ```@example metals
-qcboot_fit5 |> display
+println(qcboot_fit5)
 ```
 
 
@@ -432,7 +431,7 @@ qc_fit7a = qgcomp_glm_boot(@formula(y ~ iron + lead + cadmium +
                          msmformula = @formula(y~mixture + mixture^2),
                          contrasts = Dict(:iron => DummyCoding()))
 # underlying fit
-qc_fit7a.ulfit |> display
+println(qc_fit7a.ulfit)
 responseplot(qc_fit7a)
 ```
 
@@ -472,11 +471,11 @@ Note one restriction on exploring non-linearity: while we can use flexible funct
 
 The graphical approaches don't give a clear picture of which model might be preferred, but we can compare the model fits using AIC, or BIC (information criterion that weigh model fit with over-parameterization). Both of these criterion suggest the linear model fits best (lowest AIC and BIC), which suggests that the apparently non-linear fits observed in the graphical approaches don't improve prediction of the health outcome, relative to the linear fit, due to the increase in variance associated with including more parameters.
 ```@example metals
-aic(qc_fit6lin) |> display
+println(aic(qc_fit6lin))
 #aic(qc_fit6nonlin) |> display
 #aic(qc_fit6nonhom) |> display
 
-bic(qc_fit6lin) |> display
+println(bic(qc_fit6lin))
 #bic(qc_fit6nonlin) |> display
 #bic(qc_fit6nonhom) |> display
 ```
