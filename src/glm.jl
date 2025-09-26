@@ -20,3 +20,5 @@ for f in (
         GLM.$f(m::QGcomp_glm) = GLM.$f(m.ulfit)
     end
 end
+
+

@@ -22,6 +22,24 @@ checklinearadditive(@formula(y~x1+x2 + sqrt(x1)+x3+z1+z1^2).rhs, expnms)
 checklinearadditive(@formula(y~x1+x2 + sqrt(x2)+x3+z1+z1^2).rhs, expnms)
 =#
 
+
+function get_rownms_msm(m)
+    ms = m.msm
+    if typeof(ms.msmfit) <: Qgcomp_EEmsm
+        oneobs = ms.msmfit.MSMdf[1:1,:]
+        ff = ms.msmformula
+        vcov = ms.msmfit.vcov
+    else
+        oneobs = map(x -> x[1:1], ms.msmfit.mf.data)
+        ff = sublhs(ms.msmformula, :ypred)
+        vcov =  ms.bootparm_vcov
+    end
+    sch = schema(ff,  oneobs, m.contrasts)
+    f = apply_schema(ff, sch, typeof(m))
+    coefnames(f.rhs)
+end
+
+
 function getsyms(term::T) where {T<:InteractionTerm}
     [t.sym for t in terms(term)]
 end
@@ -51,6 +69,40 @@ function checklinearadditive(rhs, expnms)
     end
     true
 end
+
+
+#=
+getsyms = Qgcomp.getsyms
+=#
+function extractsymbols(rhs)
+    symbs::Vector{Symbol} = []
+    for t in rhs
+        if hasfield(typeof(t), :sym)
+            push!(symbs, t.sym)
+        elseif typeof(t)<:InteractionTerm
+            [push!(symbs, ss) for ss in getsyms(t)]
+        elseif hasfield(typeof(t), :terms)
+            true
+        elseif typeof(t)<:FunctionTerm
+            push!(symbs, t.args[1].sym)
+        end
+    end
+    unique(symbs)
+end
+
+function fake_design(formula, contrasts, T)
+    fkdat = DataFrame(trashvar=0.0)
+    addsymbs = extractsymbols(formula.rhs)
+    fkdat[:,formula.lhs.sym] .=  0.
+    for s in vcat(addsymbs, formula.lhs.sym)
+        fkdat[:,s] .=  0.
+    end
+    sch2 = schema(formula, fkdat, contrasts)
+    f2 = apply_schema(formula, sch2, T)
+    _, fakeX = modelcols(f2, fkdat[1:1, :])
+    fakeX
+end
+
 
 function subterm!(rhs, idx, t, expnms)
     if typeof(t) <: Term

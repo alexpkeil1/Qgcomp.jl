@@ -10,9 +10,9 @@ function Base.show(io::IO, w::QGcomp_weights)
     if !isvalid(w)
         println(io, "Exposure specific weights not estimated in this type of model")
     else
-        println(io, "Negative weights")
+        println(io, "Scaled effect size (negative direction)")
         println(io, size(w.neg, 1) > 0 ? w.neg : "(none)")
-        println(io, "Positive weights")
+        println(io, "Scaled effect size (positive direction)")
         println(io, size(w.pos, 1) > 0 ? w.pos : "(none)\n")
     end
 end
@@ -83,13 +83,34 @@ end
 x = rand(100, 3)
 q=4
 nexp = size(x,2)
+
+getbreaks = Qgcomp.getbreaks
+breakscore = Qgcomp.breakscore
+
+breaks = getbreaks(x, q)
+xq = breakscore(x, breaks)
+
+
 ```
 """
 =#
-function quantize(x, q)
+function quantize(x::Vector; breaks = sort(vcat([-floatmax(), floatmax()]..., quantile(x, [.25, .5, .75]))))
+    xq = breakscore(x, breaks)
+    xq, breaks  # can turn into struct
+end
+
+
+function quantize(x::Vector, q)
     breaks = getbreaks(x, q)
     xq = breakscore(x, breaks)
     xq, breaks  # can turn into struct
+end
+
+function get_xq(x; breaks= reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)]))
+    nexp = size(x, 2)
+    xqset = [quantize(x[:, j]; breaks=breaks[:,j]) for j = 1:nexp]
+    xq = reduce(hcat, [z[1] for z in xqset])
+    xq, breaks
 end
 
 function get_xq(x, q)
@@ -103,9 +124,17 @@ end
 #=
 """
 ```julia
+using DataFrames
 expnms = [:x1, :x2, :x3]
 expnms = ["x1", "x2", "x3"]
 df = DataFrame(rand(100,3), expnms)
+
+    x = df[:, expnms]
+    xq, breaks = get_xq(x, 4)
+
+
+get_dfq = Qgcomp.get_dfq
+get_xq = Qgcomp.get_xq
 get_dfq(df, expnms, 4)
 get_dfq(df, expnms, nothing)
 ```
@@ -114,12 +143,22 @@ get_dfq(df, expnms, nothing)
 function get_dfq(data, expnms, q)
     qdata = deepcopy(data)
     if isnothing(q)
+        @warn "q is nothing, and intvals are not specifed: defaulting to deciles of combined exposure data (assuming exposures are on comparable scales)"
         intvals = quantile(Matrix(qdata[:, expnms]), [q for q = 0.1:0.1:0.9])
-        return ((qdata, q, intvals))
+        return ((qdata, nothing, intvals))
     end
     x = data[:, expnms]
     xq, breaks = get_xq(x, q)
-    intvals = sort(unique(quantize(rand(1000), q)[1]))
+    intvals = sort(unique(xq))
+    qdata[:, expnms] = xq
+    qdata, breaks, intvals
+end
+
+function get_dfq(data, expnms; breaks=reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)]))
+    qdata = deepcopy(data)
+    x = data[:, expnms]
+    xq, breaks = get_xq(x; breaks=breaks)
+    intvals = sort(unique(xq))
     qdata[:, expnms] = xq
     qdata, breaks, intvals
 end
@@ -176,16 +215,50 @@ function getweights(coefs, coefnames_, expnms)
 end
 
 
-function vccomb(vc, vcnames, expnms)
+"""
+Covariance between linear combinations of terms
+
+e.g. for a linear regression 
+β0 + β1*x + β2*z + β3*w + β4*r
+
+with coefficient covariance matrix V, 
+
+the variance for ψ = β1 + β2 (e.g. the simultaneous effect of increasing x and z by one unit)
+    is calculated as vccomb(V, [0,1,1,0,0], [0,1,1,0,0])
+
+The covariance term COV(ψ, β0) 
+    is calculated as vccomb(V, [0,1,1,0,0], [1,0,0,0,0])
+
+This function is useful for qgcomp methods when ψ is just a sum of β coefficients, because it allows
+    straightforward calculation of the full covariance matrix. The underlying calculations are very simple,
+    but the function provides 
+
+"""
+function vccomb(vc::Matrix{R0}, weightvec1::Vector{R1}, weightvec2::Vector{R2}) where {R0<:Real, R1<:Real, R2<:Real}
+    weightvec1' * vc * weightvec2
+end
+
+function vccomb(vc::Matrix{R0}, weightvec1::Vector{R1}) where {R0<:Real, R1<:Real}
+    weightvec1' * vc * weightvec1
+end
+
+secomb(vc,w1,w2) = sqrt.(vccomb(vc,w1,w2))
+secomb(vc,w) = sqrt.(vccomb(vc,w))
+
+"""
+One version of the function (string vector arguments) is very specifically tuned toward a covariance matrix for qgcomp_glm_boot, 
+    given the covariance matrix column labels and expnms. It assumes a univariate ψ parameter.
+"""
+function vccomb(vc::Matrix{R0}, vcnames::Vector{S1}, expnms::Vector{S2}) where {R0<:Real, S1<:String, S2<:String}
     weightvec = zeros(length(vcnames))
     expidx = findall([vci ∈ expnms for vci in vcnames])
     weightvec[expidx] .= 1.0
     nonexpcols = findall(weightvec .== 0.0)
-    nonexpstart = findfirst(weightvec .== 0.0)
+    #nonexpstart = findfirst(weightvec .== 0.0)
     expstart = findfirst(weightvec .> 0.0)
     vcov_psi = zeros(length(nonexpcols) + 1, length(nonexpcols) + 1)
     # diagonal term: mixture X mixture
-    vcov_psi[expstart, expstart] = weightvec' * vc * weightvec # psi
+    vcov_psi[expstart, expstart] = vccomb(vc, weightvec) # psi
     if length(nonexpcols)>0
         expdestination = setdiff(1:(length(nonexpcols) .+ 1), expstart)
         # diagonal terms: covariate X covariate
@@ -196,7 +269,7 @@ function vccomb(vc, vcnames, expnms)
             j = expdestination[cov_index]
             wv .*= 0.0
             wv[cov_col] = 1.0
-            vcov_psi[expstart, j] = vcov_psi[j, expstart] = weightvec' * vc * wv
+            vcov_psi[expstart, j] = vcov_psi[j, expstart] = vccomb(vc, weightvec, wv)
         end
     end
     vcov_psi

@@ -2,7 +2,17 @@
 
 StatsBase.isfitted(m::M) where {M<:QGcomp_model} = m.fitted
 
+StatsBase.coef(ms::Qgcomp_EEmsm) = ms.coef
+StatsBase.vcov(ms::Qgcomp_EEmsm) = ms.vcov
 
+
+function StatsBase.coef(m::M) where {M<:QGcomp_model} 
+    m.fit[1]
+end
+
+function StatsBase.vcov(m::M) where {M<:QGcomp_model} 
+    m.fit[2]
+end
 
 
 """
@@ -32,7 +42,7 @@ function StatsBase.fit!(
     if bootstrap
         fit_boot!(rng, m; contrasts = contrasts, kwargs...)
     else
-        fit_noboot!(m)
+        fit_noboot!(m, contrasts)
     end
     nothing
 end
@@ -41,7 +51,7 @@ function StatsBase.fit!(m::QGcomp_glm; contrasts::Dict{Symbol,<:Any} = Dict{Symb
     if bootstrap
         fit_boot!(m; contrasts = contrasts, kwargs...)
     else
-        fit_noboot!(m)
+        fit_noboot!(m,contrasts)
     end
     nothing
 end
@@ -66,8 +76,8 @@ end
 
 
 function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGcomp_cox}}
-    contrasts = Dict{Symbol,Any}()
-    sch = schema(m.formula, m.data, contrasts)
+    #contrasts = Dict{Symbol,Any}()
+    sch = schema(m.formula, m.data, m.contrasts)
     f = apply_schema(m.formula, sch, typeof(m))
     hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
     coeftab = gencoeftab(m, level)
@@ -85,7 +95,7 @@ function StatsBase.coeftable(m::M; level = 0.95) where {M<:Union{QGcomp_glm,QGco
         else
             rownms = []
         end
-        rownms = vcat(rownms, "ψ")
+        rownms = vcat(rownms, "mixture")
         rownms = vcat(rownms, nonpsi)
     end
     CoefTable(coeftab, colnms, rownms, 4, 3)
@@ -93,8 +103,8 @@ end
 
 
 function StatsBase.coeftable(m::QGcomp_ee; level = 0.95)
-    contrasts = Dict{Symbol,Any}()
-    sch = schema(m.formula, m.data, contrasts)
+    #contrasts = Dict{Symbol,Any}()
+    sch = schema(m.formula, m.data, m.contrasts)
     f = apply_schema(m.formula, sch, typeof(m))
 
     hasintercept = StatsModels.hasintercept(f)# any([typeof(t)<:InterceptTerm for t in f.rhs.terms])
@@ -102,9 +112,8 @@ function StatsBase.coeftable(m::QGcomp_ee; level = 0.95)
     coeftab = gencoeftab(m, level)
 
     colnms = ["Coef.", "Std. Error", "z", "Pr(>|z|)", "Lower 95%", "Upper 95%"]
-    rownms = ["ψ$i" for i = 1:size(coeftab, 1)]
-    if hasintercept
-        rownms = vcat("(Intercept)", rownms[1:(end-1)])
-    end
+    #rownms = ["ψ$i" for i = 1:size(coeftab, 1)]
+    rownms = get_rownms_msm(m)
+
     CoefTable(coeftab, colnms, rownms, 4, 3)
 end

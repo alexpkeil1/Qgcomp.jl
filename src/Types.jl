@@ -18,20 +18,43 @@ mutable struct QGcomp_weights{N<:DataFrame,P<:DataFrame,V<:Bool} <: QGcomp_abstr
 end
 
 
+mutable struct Qgcomp_EEmsm <: RegressionModel
+    coef_vcov::Tuple{Vector,Matrix}
+    coef::Vector
+    vcov::Matrix
+    MSMdf::Union{D,M} where{D<:DataFrame, M<:Matrix}
+end
+
 mutable struct Qgcomp_MSM{
     F<:RegressionModel,
     D<:Array{Float64,2},
     V<:Array{Float64,2},
     D2<:Array{Float64,2},
     V2<:Array{Float64,2},
+    D3<:Array{Float64,2},
+    V3<:Array{Float64,2},
+    Di<:Distribution,
+    L<:Link,
+    F2<:FormulaTerm,
 } <: AbstractQgcomp_MSM
     msmfit::F
+    parms::Vector
+    meanypred::Vector
     ypred::Vector
-    intval::Vector{Float64}
+    intvector::Vector{Float64}
     bootparm_draws::D
     bootparm_vcov::V
     meanypred_draws::D2
     meanypred_vcov::V2
+    #
+    meanypredmsm::Vector
+    ypredmsm::Vector
+    meanypredmsm_draws::D3
+    meanypredmsm_vcov::V3
+    msmfamily::Di
+    msmlink::L
+    contrasts::Dict{Symbol,<:Any}
+    msmformula::F2
 end
 
 
@@ -52,12 +75,14 @@ mutable struct QGcomp_glm{
     family::D
     link::L
     breaks::Any
+    intvals::Any
     ulfit::Any
     fit::Any
     fitted::Bool
     id::I
     msm::Any
     qgcweights::W
+    contrasts::Dict{Symbol,<:Any}
 end
 
 
@@ -77,12 +102,14 @@ mutable struct QGcomp_cox{
     family::D
     link::L
     breaks::Any
+    intvals::Any
     ulfit::Any
     fit::Any
     fitted::Bool
     id::Vector{I}
     msm::Any
     qgcweights::W
+    contrasts::Dict{Symbol,<:Any}
 end
 
 mutable struct QGcomp_ee{
@@ -109,6 +136,7 @@ mutable struct QGcomp_ee{
     id::I
     msm::Any
     qgcweights::W
+    contrasts::Dict{Symbol,<:Any}
 end
 
 
