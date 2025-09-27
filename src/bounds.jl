@@ -2,6 +2,8 @@
 
 ## pointwise effect size bounds
 
+"""
+Confidence bounds for effect measures and linear predictions at joint exposure values
 
 ```julia
 using Qgcomp, DataFrames, StatsModels
@@ -13,12 +15,13 @@ xq, _ = Qgcomp.get_xq(x, 4)
 y = randn(100) + xq * [.1, 0.05, 0]
 data = DataFrame(hcat(y,x,z), [:y, :x1, :x2, :x3, :z1, :z2, :z3])
 form = @formula(y~x1+x2+x3+z1+z2+z3)
-form_noint = @formula(y~-1+x1+x2+x3+z1+z2+z3)
+form_noint = @formula(y~ -1+x1+x2+x3+z1+z2+z3)
 expnms = [:x1, :x2, :x3]
 
 m = qgcomp_glm_ee(form, data, expnms, 4, Normal())
-Qgcomp.printbounds(bounds(m, 0:.1:3, 0.8))
+Qgcomp.printbounds(bounds(m, 0:0.1:3, 0.8))
 ```
+"""
 function bounds(m, intvals = m.intvals, refval = intvals[1]; level = 0.95, types = ["pointwise", "model"])
     pwnames = [:mixture, :linpred, :diff, :ll_diff, :ul_diff, :se_diff]
     mnames = [:mixture, :linpred, :ll_simul, :ul_simul]
@@ -370,10 +373,10 @@ end
 
 
 function printbounds(io, b)
-        println(io, "Pointwise bounds")
-        println(io, b[:pointwise])
-        println(io, "Modelwise bounds")
-        println(io, b[:model])
+    println(io, "Pointwise bounds")
+    println(io, b[:pointwise])
+    println(io, "Modelwise bounds")
+    println(io, b[:model])
 end
 
 
