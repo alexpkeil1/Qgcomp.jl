@@ -176,9 +176,9 @@ ff = FormulaTerm(f.lhs, (GLM.Term.(Symbol.(Xnm))...,))
 # conditional odds ratio
 qc_fit2 = qgcomp_glm_noboot(ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial())
 # marginal odds ratio
-qcboot_fit2 = qgcomp_glm_boot(ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial(), B=10)
+qcboot_fit2 = qgcomp_glm_boot(Xoshiro(122),ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial(), B=10)
 # marginal risk ratio
-qcboot_fit2b = qgcomp_glm_boot(ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial(), B=10, msmlink=LogLink())
+qcboot_fit2b = qgcomp_glm_boot(Xoshiro(122),ff, metals[:,vcat(Xnm, "disease_state")], Xnm, 4, Binomial(), B=10, msmlink=LogLink())
 ```
 
 Compare a `qgcomp_glm_noboot` fit:
@@ -222,7 +222,7 @@ From the first plot we see weights from `qgcomp_glm_noboot` function, which incl
 length of the bars corresponds to the effect size only relative to other effects in the same direction. The darkness of the bars corresponds to the overall effect size - in this case the bars on the right (positive) side of the plot are darker because the overall "mixture" effect is positive. Thus, the shading allows one to make informal comparisons across the left and right sides: a large, darkly shaded bar indicates a larger independent effect than a large, lightly shaded bar.
 
 ```@example metals
-qcboot_fit3 = qgcomp_glm_boot(@formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
+qcboot_fit3 = qgcomp_glm_boot(Xoshiro(122), @formula(y ~ mage35 + arsenic + barium + cadmium + calcium + chloride + 
                            chromium + copper + iron + lead + magnesium + manganese + 
                            mercury + selenium + silver + sodium + zinc), metals, Xnm, 4, Normal(), 
                            B=50)# B should be 200-500+ in practice
@@ -315,7 +315,7 @@ as follows:
 
 ```@example metals
 
-qcboot_fit5 = qgcomp_glm_boot(ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) # directly specify MSM formula
+qcboot_fit5 = qgcomp_glm_boot(Xoshiro(122),ffsq, metals, Xnm, 4, Normal(), msmformula = @formula(y~mixture+mixture^2)) # directly specify MSM formula
 responseplot(qcboot_fit5) 
 ```
 ```@example metals
@@ -369,19 +369,19 @@ Here, we examine a one strategy for default and exploratory approaches to mixtur
 #newXnm = unique(rownames(idx)) # iron, lead, and cadmium
 newXnm = [:iron, :lead, :cadmium]
 
-qc_fit6lin = qgcomp_glm_boot(@formula(y ~ iron + lead + cadmium + 
+qc_fit6lin = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc),
                         metals, newXnm,
                           8, Normal(), B=100)
 #=
-qc_fit6nonlin = qgcomp_glm_boot(y ~ bs(iron) + bs(cadmium) + bs(lead) +
+qc_fit6nonlin = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron) + bs(cadmium) + bs(lead) +
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc,
                          expnms=newXnm,
                          metals, family=gaussian(), q=8, B=10, degree=2)
 
-qc_fit6nonhom = qgcomp_glm_boot(y ~ bs(iron)*bs(lead) + bs(iron)*bs(cadmium) + bs(lead)*bs(cadmium) +
+qc_fit6nonhom = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron)*bs(lead) + bs(iron)*bs(cadmium) + bs(lead)*bs(cadmium) +
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc,
                          expnms=newXnm,
@@ -418,7 +418,7 @@ caution should be used when judging the accuracy of a fit when comparing the "sm
 "MSM fit." 
 ```@example metals
 println("This is a placeholder for an example with spline terms")
-#qc_overfit = qgcomp_glm_boot(y ~ bs(iron) + bs(cadmium) + bs(lead) +
+#qc_overfit = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron) + bs(cadmium) + bs(lead) +
 #                         mage35 + bs(arsenic) + bs(magnesium) + bs(manganese) #+ bs(mercury) + 
 #                         bs(selenium) + bs(silver) + bs(sodium) + bs(zinc),
 #                         expnms=Xnm,
@@ -441,7 +441,7 @@ to moderate sample sizes due to large numbers of parameters.
 
 #### using indicator terms for each quantile
 ```@example metals
-qc_fit7a = qgcomp_glm_boot(@formula(y ~ iron + lead + cadmium + 
+qc_fit7a = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc),
                          metals, newXnm, 8,
@@ -457,7 +457,7 @@ responseplot(qc_fit7a)
 
 #### interactions between indicator terms
 ```@example metals
-qc_fit7b = qgcomp_glm_boot(@formula(y ~ iron*lead + cadmium + 
+qc_fit7b = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron*lead + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc),
                          metals, newXnm, 8,
@@ -475,7 +475,7 @@ responseplot(qc_fit7b, plots=["p", "m"])
 
 #### breaks at specific quantiles (these breaks act on the quantized basis)
 ```@example metals
-qc_fit7c = qgcomp_glm_boot(@formula(y ~ (iron>4)*(lead>4) + cadmium + 
+qc_fit7c = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ (iron>4)*(lead>4) + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 
                          selenium + silver + sodium + zinc),
                          metals, newXnm, 8,
