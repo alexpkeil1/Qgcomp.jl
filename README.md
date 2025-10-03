@@ -1,6 +1,9 @@
 # Qgcomp.jl
 Quantile g-computation for Julia
 
+Documentation [here (stable version)](https://alexpkeil1.github.io/Qgcomp.jl/stable/)
+and [here (dev version)](https://alexpkeil1.github.io/Qgcomp.jl/dev/)
+
 ### Developer's note
 This package is mostly for internal usage, so documentation is not extensive. Below is a simple simulation example to get you started if you wish to use this for your own work. Questions about functionality submitted as bug reports will be closed without comment. Functionality questions can be addressed for the R package `qgcomp`.
 
