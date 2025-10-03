@@ -16,7 +16,7 @@ function QGcomp_cox(formula, data, expnms, q, family, link, breaks, intvals)
     QGcomp_cox(
         formula,
         data,
-        String.(expnms),
+        Symbol.(expnms),
         q,
         family,
         link,
@@ -34,17 +34,17 @@ end
 
 function QGcomp_cox(formula, data, expnms, q, family, link, breaks)
     qdata, breaks, intvals = get_dfq(data, expnms; breaks=breaks)
-    QGcomp_cox( formula, qdata, String.(expnms), q, family, link, breaks, intvals, )
+    QGcomp_cox( formula, qdata, Symbol.(expnms), q, family, link, breaks, intvals, )
 end
 
 function QGcomp_cox(formula, data, expnms, q, breaks)
     qdata, breaks, intvals = get_dfq(data, expnms; breaks=breaks)
-    QGcomp_cox( formula, qdata, String.(expnms), q, Cox(), canonicallink(Cox()), breaks, intvals, )
+    QGcomp_cox( formula, qdata, Symbol.(expnms), q, Cox(), canonicallink(Cox()), breaks, intvals, )
 end
 
 function QGcomp_cox(formula, data, expnms, q)
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_cox(formula, qdata, expnms, q, Cox(), canonicallink(Cox()), breaks, intvals)
+    QGcomp_cox(formula, qdata, Symbol.(expnms), q, Cox(), canonicallink(Cox()), breaks, intvals)
 end
 
 
@@ -126,15 +126,32 @@ function _fit_msm_cox(rng, msmformula, data, ulfit, contrasts, expnms, intvals, 
 end
 
 
-function fit_boot!(rng, m::QGcomp_cox; B::Int64 = 200, contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(), kwargs...)
-    if !issubset(keys(kwargs), (:mcsize, :iters, :intvals, :msmformula, :degree, :id))
+function fit_boot!(rng, m::QGcomp_cox; kwargs...)
+    if !issubset(keys(kwargs), (:B, :contrasts, :mcsize, :iters, :intvals, :msmformula, :degree, :id))
         throw(ArgumentError("Qgcomp error: unsupported keyword argument in: $(kwargs...)"))
     end
+
+    if :B ∈ keys(kwargs)
+        B = kwargs[:B]
+    else
+        B = 200
+    end
+    
+    if :contrasts ∈ keys(kwargs)
+        m.contrasts = kwargs[:contrasts]
+    else
+        m.contrasts = Dict{Symbol,Any}()
+    end
+
     ################
     # specifying overall effect definition
     ################
 
-    m.intvals = :intvals ∈ keys(kwargs) ? kwargs[:intvals] : (1:m.q) .- 1.0
+    #m.intvals = :intvals ∈ keys(kwargs) ? kwargs[:intvals] : (1:m.q) .- 1.0
+    if :intvals ∈ keys(kwargs)
+        m.intvals = kwargs[:intvals]
+    end
+
     ################
     # underlying model
     ################
@@ -165,10 +182,9 @@ function fit_boot!(rng, m::QGcomp_cox; B::Int64 = 200, contrasts::Dict{Symbol,<:
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
 
     #### identical to glm up to this point
-    msm, dpred, dpredmean = _fit_msm_cox(rng, msmformula, m.data, m.ulfit, contrasts, m.expnms, m.intvals, m.id, mcsize)
+    msm, dpred, dpredmean = _fit_msm_cox(rng, msmformula, m.data, m.ulfit, m.contrasts, m.expnms, m.intvals, m.id, mcsize)
 
-    m.msm = Qgcomp_MSM(msm, coef(msm), dpredmean, dpred, reduce(vcat, [fill(iv, mcsize) for iv in m.intvals]), Cox(), canonicallink(Cox()), contrasts, msmformula)
-    
+    m.msm = Qgcomp_MSM(msm, coef(msm), dpredmean, dpred, reduce(vcat, [fill(iv, mcsize) for iv in m.intvals]), Cox(), canonicallink(Cox()), m.contrasts, msmformula)
     ################
     # bootstrapping
     ################
@@ -176,7 +192,7 @@ function fit_boot!(rng, m::QGcomp_cox; B::Int64 = 200, contrasts::Dict{Symbol,<:
     m.msm.meanypred_draws = Array{Float64,2}(undef, B, length(m.intvals))
 
     for iter = 1:B
-        bootmsmcoef, _, bootypredmean = dobootcox( rng, m.id, m.formula, msmformula, m.data, m.family, m.expnms, m.intvals; contrasts = contrasts, kwargs..., )
+        bootmsmcoef, _, bootypredmean = dobootcox( rng, m.id, m.formula, msmformula, m.data, m.family, m.expnms, m.intvals, m.contrasts, mcsize)
         m.msm.bootparm_draws[iter, :] = bootmsmcoef
         m.msm.meanypred_draws[iter, :] = bootypredmean
     end
@@ -199,9 +215,9 @@ function dobootcox(
     data,
     family,
     expnms,
-    intvals;
-    contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
-    kwargs...,
+    intvals,
+    contrasts,
+    mcsize
 )
     uid = unique(id)
     idx = collect(1:length(id))
@@ -217,7 +233,6 @@ function dobootcox(
     bootid = reduce(vcat, [fill(ubootid[bi], length(bootobs)) for (bi, bootobs) in enumerate(bootidmap)])
     bootdf = data[bootidx, :]
     #bootids = id[bootidx]
-    mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     # underlying fit
     ulfit = fit(LSurvival.PHModel, formula, bootdf) # this form needed for proper use of predict function
 
@@ -265,7 +280,7 @@ function qgcomp_cox_noboot(formula, data, expnms, q; kwargs...)
     else
         m = QGcomp_cox(formula, data, expnms, q)
     end
-    fit_noboot!(m; kwargs...)
+    fit!(m; bootstrap=false, kwargs...)
     m.qgcweights.isvalid = checklinearadditive(m.formula.rhs, expnms)
     if m.qgcweights.isvalid
         m.qgcweights.neg, m.qgcweights.pos = getweights(coef(m.ulfit), coefnames(m.ulfit), String.(m.expnms))
@@ -306,9 +321,10 @@ function qgcomp_cox_boot(rng, formula, data, expnms, q; kwargs...)
     else
         m = QGcomp_cox(formula, data, expnms, q)
     end
-    fit_boot!(rng, m; kwargs...)
+    fit!(rng, m; bootstrap=true, kwargs...)
     m
 end
 
 qgcomp_cox_boot(formula, data, expnms, q; kwargs...) = qgcomp_cox_boot(Xoshiro(), formula, data, expnms, q; kwargs...)
 ;
+

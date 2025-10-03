@@ -358,15 +358,11 @@ Exploring a non-linear fit in settings with multiple exposures is challenging. O
 
 NOTE: qgcomp necessarily fits a regression model with exposures that have a small number of possible values, based on the quantile chosen. By package default, this is `q=4`, but it is difficult to fully examine non-linear fits using only four points, so we recommend exploring larger values of `q`, which will change effect estimates (i.e. the model coefficient implies a smaller change in exposures, so the expected change in the outcome will also decrease).
 
-Here, we examine a one strategy for default and exploratory approaches to mixtures that can be implemented in qgcomp using a smaller subset of exposures (iron, lead, cadmium), which we choose via the correlation matrix. High correlations between exposures may result from a common source, so small subsets of the mixture may be useful for examining hypotheses that relate to interventions on a common environmental source or set of behaviors. We can still adjust for the measured exposures, even though only 3 our exposures of interest are considered as the mixture of interest. This next example will require a new R package to help in exploring non-linearity: `splines`. Note that `qgcomp_glm_boot` must be used in order to produce the graphics below, as `qgcomp_glm_noboot` does not calculate the necessary quantities.
+Here, we examine a one strategy for default and exploratory approaches to mixtures that can be implemented in qgcomp using a smaller subset of exposures (iron, lead, cadmium), which we choose via the correlation matrix. High correlations between exposures may result from a common source, so small subsets of the mixture may be useful for examining hypotheses that relate to interventions on a common environmental source or set of behaviors. We can still adjust for the measured exposures, even though only 3 our exposures of interest are considered as the mixture of interest. First, we will demonstrate a linear MSM fit. Note that `qgcomp_glm_boot` must be used in order to produce the graphics below, as `qgcomp_glm_noboot` does not calculate the necessary quantities.
+
 
 #### Graphical approach to explore non-linearity in a correlated subset of exposures using splines
 ```@example metals
-#library(splines)
-# find all correlations > 0.6 (this is an arbitrary choice)
-#cormat = cor(metals[:,Xnm])
-#idx = which(cormat>0.6 & cormat <1.0, arr.ind = TRUE)
-#newXnm = unique(rownames(idx)) # iron, lead, and cadmium
 newXnm = [:iron, :lead, :cadmium]
 
 qc_fit6lin = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium + 
@@ -374,72 +370,95 @@ qc_fit6lin = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium +
                          selenium + silver + sodium + zinc),
                         metals, newXnm,
                           8, Normal(), B=100)
-#=
-qc_fit6nonlin = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron) + bs(cadmium) + bs(lead) +
-                         mage35 + arsenic + magnesium + manganese + mercury + 
-                         selenium + silver + sodium + zinc,
-                         expnms=newXnm,
-                         metals, family=gaussian(), q=8, B=10, degree=2)
-
-qc_fit6nonhom = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron)*bs(lead) + bs(iron)*bs(cadmium) + bs(lead)*bs(cadmium) +
-                         mage35 + arsenic + magnesium + manganese + mercury + 
-                         selenium + silver + sodium + zinc,
-                         expnms=newXnm,
-                         metals, family=gaussian(), q=8, B=10, degree=3)
-=#
 ```
 
+This next model will require a different way to specify the model formula to help in exploring non-linearity via splines. The `@formula` macro in Julia does not allow splines to be specified in this way. The `rcs` function uses a restricted cubic spline function that is similar to the splines used in the `Hmisc` package (in R) and `%DASPLINE` macro (in SAS). Here, we have to explicitly specify knots, though there are helper functions to calculate knots based on the same defaults as `Hmisc.`
 
-It helps to place the plots on a common y-axis, which is easy due to dependence of the qgcomp plotting functions on ggplot. Here"s the linear fit :
+Note that thse spline bases are done on the "quantized" exposures (a categories).
+
 ```@example metals
-pl_fit6lin = responseplot(qc_fit6lin, referentindex = 4);
-plot!(pl_fit6lin, ylim=(-0.75, .75)) 
+# getting quantiles of "quantized" versions for knots of restricted cubic splines
+knts_iron = quantile(quantize(metals.iron, 8)[1], [0.05, 0.275, 0.5, 0.725, 0.95])
+knts_cadmium = quantile(quantize(metals.cadmium, 8)[1], [0.05, 0.275, 0.5, 0.725, 0.95])
+#knts_lead = quantile(quantize(metals.lead, 8)[1], [0.05, 0.275, 0.5, 0.725, 0.95])
+knts_lead = rsplineknots(quantize(metals.lead)[1], 5)
+#equivalent: rsplineknots(quantize(metals.lead)[1], 5)
+
+form_spline_nonlin = term(:y) ~ term(1) + rcs(:iron, knts_iron) + rcs(:cadmium, knts_cadmium) + rcs(:lead, knts_lead) + sum([term(Symbol(t)) for t in ["mage35", "arsenic", "magnesium", "manganese", "mercury", "selenium", "silver", "sodium", "zinc"]]) 
+
+                          
+
+qc_fit6nonlin = qgcomp_glm_boot(Xoshiro(122),form_spline_nonlin,
+                         metals, newXnm, 8, Normal(), B=100, degree=2)
 ```
 
-Here's the non-linear fit :
-```{r graf-n-lin-2, results="markup", fig.show="hold", fig.height=3, fig.width=7.5, cache=FALSE}
-pl_fit6nonlin = plot(qc_fit6nonlin, suppressprint = TRUE, referentindex = 4)
-pl_fit6nonlin + coord_cartesian(ylim=c(-0.75, .75)) + 
-  ggtitle("Non-linear fit: mixture of iron, lead, and cadmium")
+We can also elaborate on this model using further spline terms by including interactions (recalling that this will lead to non-linearity in the overall effect). This model is for easy illustration only - it is likely grossly overfit, but it demonstrates different ways to allow non-linearty and non-addivity in a flexible way (here we use the estimating equation approach for illustration - it could also be a bootstrap fit)
+
+
+```@example metals
+
+form_spline_nonlin_nonint = term(:y) ~ term(1) + rcs(:iron, knts_iron)* rcs(:cadmium, knts_iron) + rcs(:lead, knts_lead) + sum([term(Symbol(t)) for t in ["mage35", "arsenic", "magnesium", "manganese", "mercury", "selenium", "silver", "sodium", "zinc"]]) 
+
+qc_fit6nonlin_nonint = qgcomp_glm_ee(form_spline_nonlin_nonint,
+                         metals, newXnm, 8, Normal(), degree=2)
 ```
 
-And here's the non-linear fit with statistical interaction between exposures (recalling that this will lead to non-linearity in the overall effect):
-```{r graf-n-lin 3, results="markup", fig.show="hold", fig.height=3, fig.width=7.5, cache=FALSE}
-pl_fit6nonhom = plot(qc_fit6nonhom, suppressprint = TRUE, referentindex = 4)
-pl_fit6nonhom + coord_cartesian(ylim=c(-0.75, .75)) + 
-  ggtitle("Non-linear, non-homogeneous fit: mixture of iron, lead, and cadmium")
+
+It helps to place the plots on a common y-axis, which is easy due to dependence of the qgcomp plotting functions on ggplot. Here are the two fits :
+
+```@example metals
+p = plot( ylim=(-0.75, .75));
+responseplot!(p, qc_fit6lin, referentindex = 4, plots=["model"]);
+responseplot!(p, qc_fit6nonlin, referentindex = 4, plots=["model"])
 ```
+
+Here's the fit with interactions :
+```@example metals
+p = plot( ylim=(-0.75, .75));
+responseplot!(p, qc_fit6nonlin_nonint, referentindex = 4)
+```
+
 
 #### Caution about graphical approaches
-The underlying conditional model fit can be made extremely flexible, and the graphical representation of this (via the 
-smooth conditional fit) can look extremely flexible. Simply matching the overall (MSM) fit to this line is not
-a viable strategy for identifying parsimonious models because that would ignore potential for overfit. Thus,
-caution should be used when judging the accuracy of a fit when comparing the "smooth conditional fit" to the 
-"MSM fit." 
+The underlying conditional model fit can be made extremely flexible, and the graphical representation of this (via the  smooth conditional fit) can look extremely flexible. Simply matching the overall (MSM) fit to this line is not a viable strategy for identifying parsimonious models because that would ignore potential for overfit. Thus, caution should be used when judging the accuracy of a fit when comparing the "smooth conditional fit" to the  "MSM fit." 
 ```@example metals
-println("This is a placeholder for an example with spline terms")
-#qc_overfit = qgcomp_glm_boot(Xoshiro(122),y ~ bs(iron) + bs(cadmium) + bs(lead) +
-#                         mage35 + bs(arsenic) + bs(magnesium) + bs(manganese) #+ bs(mercury) + 
-#                         bs(selenium) + bs(silver) + bs(sodium) + bs(zinc),
-#                         expnms=Xnm,
-#                         metals, family=gaussian(), q=8, B=100)
-#qc_overfit
-#responseplot(qc_overfit, referentindex = 5)
 
+form_spline_overfit = term(:y) ~ term(1) + 
+rcs(:iron, rsplineknots(quantize(metals.iron)[1], 5))+
+ rcs(:cadmium, rsplineknots(quantize(metals.cadmium)[1], 5)) + 
+ rcs(:lead, rsplineknots(quantize(metals.lead)[1], 5)) + 
+ rcs(:arsenic, rsplineknots(quantize(metals.arsenic)[1], 5)) + 
+ rcs(:magnesium, rsplineknots(quantize(metals.magnesium)[1], 5)) + 
+ rcs(:manganese, rsplineknots(quantize(metals.manganese)[1], 5)) + 
+ rcs(:mercury, rsplineknots(quantize(metals.mercury)[1], 5)) + 
+ rcs(:selenium, rsplineknots(quantize(metals.selenium)[1], 5)) + 
+ rcs(:sodium, rsplineknots(quantize(metals.sodium)[1], 5)) + 
+ rcs(:selenium, rsplineknots(quantize(metals.selenium)[1], 5)) + 
+ rcs(:zinc, rsplineknots(quantize(metals.zinc)[1], 5)) + 
+ term(:mage35)
+ 
+
+qc_overfit = qgcomp_glm_boot(Xoshiro(122),form_spline_overfit,
+                         metals, newXnm, 8, Normal(), B=100, degree=2)
+```
+                         
+```@example metals
+responseplot(qc_overfit, referentindex = 5)
 ```
 
 Here, there is little statistical evidence for even a linear trend, which makes the 
 smoothed conditional fit appear to be overfit. The smooth conditional fit can be turned off, as below.
-#```@example metals
-#responseplot(qc_overfit, referentindex = 5, plots=["pointwise", "model"])
-#```
+
+```@example metals
+responseplot(qc_overfit, referentindex = 5, plots=["pointwise", "model"])
+```
 
 ### Example 6: miscellaneous other ways to allow non-linearity
-Note that these are included as examples of *how* to include non-linearities, and are not intended as 
-a demonstration of appropriate model selection. In fact, qc_fit7b is generally a bad idea in small
-to moderate sample sizes due to large numbers of parameters. 
+Note that these are included as examples of *how* to include non-linearities, and are not intended as  a demonstration of appropriate model selection. In fact, qc_fit7b is generally a bad idea in small to moderate sample sizes due to large numbers of parameters. 
 
 #### using indicator terms for each quantile
+The quantile scores of the exposures can be turned into indicator variables, rather than treated as a linear/continuous term. This requires using the "contrasts" keyword with `DummyCoding()` (similar to defining as a factor variable in R).
+
 ```@example metals
 qc_fit7a = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 
@@ -451,11 +470,14 @@ qc_fit7a = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron + lead + cadmium +
 # underlying fit
 println(qc_fit7a.ulfit)
 ```
+
 ```@example metals
 responseplot(qc_fit7a)
 ```
 
 #### interactions between indicator terms
+The indicator variables can be given a set of product terms.
+
 ```@example metals
 qc_fit7b = qgcomp_glm_boot(Xoshiro(122),@formula(y ~ iron*lead + cadmium + 
                          mage35 + arsenic + magnesium + manganese + mercury + 

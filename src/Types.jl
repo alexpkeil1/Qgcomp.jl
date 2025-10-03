@@ -60,7 +60,7 @@ end
 
 mutable struct QGcomp_glm{
     F<:FormulaTerm,
-    E<:Vector{<: String},
+    E<:Vector{<:Symbol},
     Q<:Union{Int,Nothing},
     I<:Union{Vector{<: AbstractID},Nothing},
     W<:Union{QGcomp_weights,Nothing},
@@ -87,7 +87,7 @@ end
 
 mutable struct QGcomp_cox{
     F<:FormulaTerm,
-    E<:Vector{<: String},
+    E<:Vector{<: Symbol},
     Q<:Union{Int,Nothing},
     I<:Union{ID,Nothing},
     W<:Union{QGcomp_weights,Nothing},
@@ -113,7 +113,7 @@ end
 
 mutable struct QGcomp_ee{
     F<:FormulaTerm,
-    E<:Vector{<: String},
+    E<:Vector{<: Symbol},
     Q<:Union{Int,Nothing},
     I<:Union{ID,Nothing},
     W<:Union{QGcomp_weights,Nothing},

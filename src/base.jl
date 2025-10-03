@@ -77,48 +77,59 @@ function breakscore(x, breaks)
     xq
 end
 
-#=
-"""
-```julia
-x = rand(100, 3)
-q=4
-nexp = size(x,2)
-
-getbreaks = Qgcomp.getbreaks
-breakscore = Qgcomp.breakscore
-
-breaks = getbreaks(x, q)
-xq = breakscore(x, breaks)
-
-
-```
-"""
-=#
 function quantize(x::Vector; breaks = sort(vcat([-floatmax(), floatmax()]..., quantile(x, [.25, .5, .75]))))
     xq = breakscore(x, breaks)
     xq, breaks  # can turn into struct
 end
 
 
+
+"""
+```julia
+x = rand(100, 3)
+q=4
+nexp = size(x,2)
+
+xq, breaks = quantize(x, q)
+
+```
+"""
 function quantize(x::Vector, q)
     breaks = getbreaks(x, q)
     xq = breakscore(x, breaks)
     xq, breaks  # can turn into struct
 end
 
-function get_xq(x; breaks= reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)]))
+function get_xq(x::D; breaks= reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)])) where (D<:Union{DataFrame,Matrix})
     nexp = size(x, 2)
     xqset = [quantize(x[:, j]; breaks=breaks[:,j]) for j = 1:nexp]
     xq = reduce(hcat, [z[1] for z in xqset])
     xq, breaks
 end
 
-function get_xq(x, q)
+function get_xq(x::T; breaks= reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)])) where {T<:NamedTuple}
+    nexp = length(x)
+    xqset = [quantize(getindex(x, j); breaks=breaks[:,j]) for j = 1:nexp]
+    qkeys = keys(x)
+    xq = Tuple([z[1] for z in xqset])
+    (; (qkeys .=> xq)...), breaks
+end
+
+function get_xq(x::D, q) where (D<:Union{DataFrame,Matrix})
     nexp = size(x, 2)
     xqset = [quantize(x[:, j], q) for j = 1:nexp]
     breaks = reduce(hcat, [z[2] for z in xqset])
     xq = reduce(hcat, [z[1] for z in xqset])
     xq, breaks
+end
+
+function get_xq(x::T, q) where {T<:NamedTuple}
+    nexp = length(x)
+    xqset = [quantize(getindex(x, j), q) for j = 1:nexp] 
+    breaks = reduce(hcat, [z[2] for z in xqset])
+    qkeys = keys(x)
+    xq = Tuple([z[1] for z in xqset])
+    (; (qkeys .=> xq)...), breaks
 end
 
 #=
@@ -140,31 +151,64 @@ get_dfq(df, expnms, nothing)
 ```
 """
 =#
-function get_dfq(data, expnms, q)
+function get_dfq(data::D, expnms, q) where {D<:DataFrame}
     qdata = deepcopy(data)
     if isnothing(q)
-        @warn "q is nothing, and intvals are not specifed: defaulting to deciles of combined exposure data (assuming exposures are on comparable scales)"
+        @warn "q is nothing: defaulting to deciles of combined exposure data (unless `intvals`` specified directly)"
         intvals = quantile(Matrix(qdata[:, expnms]), [q for q = 0.1:0.1:0.9])
         return ((qdata, nothing, intvals))
     end
     x = data[:, expnms]
+    #x = getindex(data, expnms)
     xq, breaks = get_xq(x, q)
     intvals = sort(unique(xq))
     qdata[:, expnms] = xq
-    qdata, breaks, intvals
+    qdata, breaks, float.(intvals)
 end
 
-function get_dfq(data, expnms; breaks=reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)]))
+@generated function setindex(x::NamedTuple,y,v::Val)
+    k = first(v.parameters)
+    k ∉ x.names ? :x : :( (x..., $k=y) )
+  end
+
+function get_dfq(data::T, expnms, q) where {T<:NamedTuple}
+    qdata = deepcopy(data)
+    if isnothing(q)
+        @warn "q is nothing: defaulting to deciles of combined exposure data (unless `intvals`` specified directly)"
+        intvals = quantile(Matrix(qdata[:, expnms]), [q for q = 0.1:0.1:0.9])
+        return ((qdata, nothing, intvals))
+    end
+    x = getindex(data, Symbol.(expnms))
+    xq, breaks = get_xq(x, q)
+    intvals = sort( unique(reduce(vcat, values(xq))))
+    for xx in Symbol.(expnms)
+        qdata[xx] .= xq[xx]
+    end
+    qdata, breaks, float.(intvals)
+end
+
+
+
+function get_dfq(data::D, expnms; breaks=reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)])) where {D<:DataFrame}
     qdata = deepcopy(data)
     x = data[:, expnms]
     xq, breaks = get_xq(x; breaks=breaks)
     intvals = sort(unique(xq))
     qdata[:, expnms] = xq
-    qdata, breaks, intvals
+    qdata, breaks, float.(intvals)
+end
+
+function get_dfq(data::T, expnms; breaks=reduce(hcat, [sort(vcat([-floatmax(), floatmax()]..., quantile(xc, [.25, .5, .75]))) for xc in eachcol(x)])) where {T<:NamedTuple}
+    qdata = deepcopy(data)
+    x = getindex(data, expnms)
+    xq, breaks = get_xq(x; breaks=breaks)
+    intvals = sort(unique(xq))
+    qdata[:, expnms] = xq
+    qdata, breaks, float.(intvals)
 end
 
 
-function psicomb(coefs, coefnames_, expnms)
+function psicomb(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:String, S2<:String}
     weightvec = zeros(length(coefnames_))
     expidx = findall([vci ∈ expnms for vci in coefnames_])
     weightvec[expidx] .= 1.0
@@ -175,6 +219,15 @@ function psicomb(coefs, coefnames_, expnms)
     psi
 end
 
+function psicomb(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:Symbol, S2<:String}
+    psicomb(coefs, String.(coefnames_), expnms) 
+end
+function psicomb(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:String, S2<:Symbol}
+    psicomb(coefs, coefnames_, String.(expnms))
+end
+function psicomb(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:Symbol, S2<:Symbol}
+    psicomb(coefs, String.(coefnames_), String.(expnms))
+end
 #=
 
 using Qgcomp, Random, DataFrames, StatsModels
@@ -212,6 +265,17 @@ function getweights(coefs, coefnames_, expnms)
         df[:, ["exposure", "coef", "ψ_partial", "weight"]]
         sort!(df, :weight)
     end, 1:2)
+end
+
+
+function getweights(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:Symbol, S2<:String}
+    getweights(coefs, String.(coefnames_), expnms) 
+end
+function getweights(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:String, S2<:Symbol}
+    getweights(coefs, coefnames_, String.(expnms))
+end
+function getweights(coefs, coefnames_::Vector{S1}, expnms::Vector{S2}) where {S1<:Symbol, S2<:Symbol}
+    getweights(coefs, String.(coefnames_), String.(expnms))
 end
 
 
@@ -275,7 +339,17 @@ function vccomb(vc::Matrix{R0}, vcnames::Vector{S1}, expnms::Vector{S2}) where {
     vcov_psi
 end
 
+function vccomb(vc::Matrix{R0}, vcnames::Vector{S1}, expnms::Vector{S2}) where {R0<:Real, S1<:Symbol, S2<:String}
+    vccomb(vc, String.(vcnames), expnms)
+end
 
+function vccomb(vc::Matrix{R0}, vcnames::Vector{S1}, expnms::Vector{S2}) where {R0<:Real, S1<:String, S2<:Symbol}
+    vccomb(vc, (vcnames), String.(expnms))
+end
+
+function vccomb(vc::Matrix{R0}, vcnames::Vector{S1}, expnms::Vector{S2}) where {R0<:Real, S1<:Symbol, S2<:Symbol}
+    vccomb(vc, String.(vcnames), String.(expnms))
+end
 
 function isvalid(w::QGcomp_weights)
     w.isvalid

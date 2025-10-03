@@ -16,7 +16,7 @@ function QGcomp_glm(formula, data, expnms, q, family, link, breaks, intvals)
     QGcomp_glm(
         formula,
         data,
-        String.(expnms),
+        Symbol.(expnms),
         q,
         family,
         link,
@@ -25,7 +25,7 @@ function QGcomp_glm(formula, data, expnms, q, family, link, breaks, intvals)
         nothing,
         nothing,
         false,
-        ID.(collect(1:size(data, 1))),
+        fakeid(data),
         nothing,
         QGcomp_weights(),
         Dict{Symbol,Any}()
@@ -37,19 +37,19 @@ end
 function QGcomp_glm(formula, data, expnms, q, family, link, breaks)
     # default to not using quantiles
     qdata, breaks, intvals = get_dfq(data, expnms; breaks=breaks)
-    QGcomp_glm( formula, qdata, String.(expnms), q, family, link, breaks, intvals, )
+    QGcomp_glm( formula, qdata, Symbol.(expnms), q, family, link, breaks, intvals, )
  end
 
 function QGcomp_glm(formula, data, expnms, q, family, link)
     # default uses quantiles
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_glm(formula, qdata, expnms, q, family, link, breaks, intvals)
+    QGcomp_glm(formula, qdata, Symbol.(expnms), q, family, link, breaks, intvals)
 end
 
 
 function QGcomp_glm(formula, data, expnms, q, family)
     qdata, breaks, intvals = get_dfq(data, expnms, q)
-    QGcomp_glm(formula, qdata, expnms, q, family, canonicallink(family), breaks, intvals)
+    QGcomp_glm(formula, qdata, Symbol.(expnms), q, family, canonicallink(family), breaks, intvals)
 end
 
 
@@ -93,10 +93,15 @@ z = rand(100, 3)
 
 xq, _ = Qgcomp.get_xq(x, 4)
 y = randn(100) + xq * [.1, .05, 0] + xq .* xq * [.1, 0, 0]
-data = DataFrame(hcat(y,x,z), [:y, :x1, :x2, :x3, :z1, :z2, :z3])
-formula = @formula(y~x1^2+x2+x3+z1+z2+z3+z3^2)
+df = DataFrame(hcat(y,x,z), [:y, :x1, :x2, :x3, :z1, :z2, :z3])
+knts = [0.5, 1.5, 2.5]
+formula = @formula(y~rcs(x1, knts)+x2+x3+z1+z2+z3+z3^2)
 expnms = ["x"*string(i) for i in 1:3]
-m = Qgcomp.QGcomp_glm(formula, data, expnms, 4, Normal())
+
+
+data = merge(df, (knts=knts,))
+getindex(data, Symbol.(expnms))
+m = Qgcomp.QGcomp_glm(formula, data, Symbol.(expnms), 4, Normal())
 m.id = Qgcomp.ID.(collect(1:size(data, 1)))
 
 fit_noboot! = Qgcomp.fit_noboot!
@@ -119,7 +124,11 @@ function fit_boot!(rng, m::QGcomp_glm; kwargs...)
     ################
     # specifying overall effect definition
     ################
-    intvals = :intvals ∈ keys(kwargs) ? kwargs[:intvals] : (1:m.q) .- 1.0
+    #intvals = :intvals ∈ keys(kwargs) ? kwargs[:intvals] : (1:m.q) .- 1.0
+    if :intvals ∈ keys(kwargs)
+        m.intvals = kwargs[:intvals]
+    end
+    #intvals = m.intvals
 
     ################
     # model form arguments via contrasts
@@ -133,7 +142,7 @@ function fit_boot!(rng, m::QGcomp_glm; kwargs...)
     ################
     # underlying model
     ################
-    fit_noboot!(m, contrasts)
+    fit_noboot!(m; contrasts=contrasts) # no kwargs... keyword arguments are passed
     m.fitted = false
 
     if (:B ∈ keys(kwargs)) 
@@ -173,7 +182,7 @@ function fit_boot!(rng, m::QGcomp_glm; kwargs...)
     uid = unique(m.id)
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     msm, ypred, ypredmean, ypredmsm, meanypredmsm =
-        _fit_msm(rng, msmformula, m.data, m.ulfit, msmfamily, msmlink, contrasts, m.expnms, intvals, m.id, mcsize)
+        _fit_msm(rng, msmformula, m.data, m.ulfit, msmfamily, msmlink, contrasts, m.expnms, m.intvals, m.id, mcsize)
     m.msm = Qgcomp_MSM(msm, coef(msm), ypredmean, ypred, msm.mf.data.mixture, msmfamily, msmlink, contrasts, msmformula)
     m.msm.ypredmsm = ypredmsm
     m.msm.meanypredmsm = meanypredmsm
@@ -186,7 +195,7 @@ function fit_boot!(rng, m::QGcomp_glm; kwargs...)
 
     for iter = 1:B
         m.msm.bootparm_draws[iter, :], m.msm.meanypred_draws[iter, :], m.msm.meanypredmsm_draws[iter, :] = doboot(
-            rng, m.id, m.formula, msmformula, m.data, m.family, m.link, msmfamily, msmlink, m.expnms, intvals; contrasts=contrasts,
+            rng, m.id, m.formula, msmformula, m.data, m.family, m.link, msmfamily, msmlink, m.expnms, m.intvals; contrasts=contrasts,
             kwargs...,
         )
     end
@@ -342,8 +351,33 @@ function _fit_msm(rng, msmformula, data, ulfit, msmfamily, msmlink, contrasts, e
 end
 
 
-function fit_noboot!(m::QGcomp_glm, contrasts=Dict{Symbol,Any}())
-    m.ulfit, m.fit = _fit_noboot(m.formula, m.data, m.family, m.link, m.expnms, contrasts)
+function fit_noboot!(m::QGcomp_glm; kwargs...)
+    validkwargs = (:intvals, :breaks, :contrasts)
+    if !issubset(keys(kwargs), validkwargs)
+        throw(ArgumentError("Qgcomp error: unsupported keyword argument in: $(kwargs...)"))
+    end
+    ################
+    # specifying overall effect definition
+    ################
+    #intvals = :intvals ∈ keys(kwargs) ? kwargs[:intvals] : (1:m.q) .- 1.0
+    if :intvals ∈ keys(kwargs)
+        m.intvals = kwargs[:intvals]
+    end
+    if :breaks ∈ keys(kwargs)
+        m.breaks = kwargs[:breaks]
+    end
+
+    ################
+    # model form arguments via contrasts
+    ################
+    if :contrasts ∈ keys(kwargs)
+        m.contrasts = kwargs[:contrasts]
+    else
+        m.contrasts = Dict{Symbol,Any}()
+    end
+
+
+    m.ulfit, m.fit = _fit_noboot(m.formula, m.data, m.family, m.link, m.expnms, m.contrasts)
     m.fitted = true
     nothing
 end
@@ -453,13 +487,25 @@ function qgcomp_glm_boot(rng, formula, data, expnms, q, family; id=nothing, kwar
         m = QGcomp_glm(formula, data, expnms, q, family)
     end
     if isnothing(id)
-        m.id = ID.(collect(1:size(data, 1)))
+        m.id = fakeid(data)
     else
         m.id = id
     end
     fit!(rng, m, bootstrap=true; kwargs...)
     m
 end
+
+
+function fakeid(data::D) where{D<:DataFrame}
+    ID.(collect(1:size(data, 1)))
+end
+
+function fakeid(data::T) where{T<:NamedTuple}
+    n = maximum([length(getindex(data, i)) for i in 1:length(data)])
+    ID.(collect(1:n))
+end
+
+
 
 qgcomp_glm_boot(formula, data, expnms, q, family; kwargs...) = qgcomp_glm_boot(Xoshiro(), formula, data, expnms, q, family; kwargs...)
 

@@ -1,8 +1,11 @@
+# Qgcomp.jl: the main module program
 
 module Qgcomp
 # utility
 using DataFrames
+using Tables: columntable
 # general stat/math
+using StatsAPI
 using StatsBase
 using LinearAlgebra
 # models
@@ -20,9 +23,8 @@ using Distributions: Normal, cdf, quantile, Distribution, ContinuousUnivariateDi
 # imports
 import Random: AbstractRNG, Xoshiro, MersenneTwister
 import Measures: mm
-
+import StatsAPI: coefnames
 import StatsModels: hasintercept, drop_intercept
-
 import StatsBase:
     aic,
     aicc,
@@ -66,10 +68,13 @@ export qgcomp_glm_noboot, qgcomp_glm_boot, qgcomp_cox_noboot, qgcomp_cox_boot, q
 export bounds, printbounds
 
 # original utility functions
-export ID, genxq, vccomb
+export ID, genxq, vccomb, quantize
+
+# splines
+export rcs, rqs, bs, rsplineknots, bsplineknots
 
 #expanded functions from imports
-export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted, coef, vcov
+export fit!, aic, aicc, bic, loglikelihood, fitted, isfitted, coef, vcov, merge
 
 #re-exports, functions
 export diag, ordinalrank, DummyCoding, HelmertCoding, EffectsCoding, HypothesisCoding, SeqDiffCoding
@@ -99,6 +104,7 @@ include("base.jl")
 include("utility.jl")
 include("sampling.jl")
 include("simulation_helpers.jl")
+include("splines.jl")
 
 # re-exports
 include("statsbase.jl")
