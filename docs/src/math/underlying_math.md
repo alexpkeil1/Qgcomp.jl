@@ -1,4 +1,4 @@
-## rules of variance:
+## Rules of variance:
 ### Variance of a sum of random variables
 $Var(X + Z) = var(X) + Var(Z) + Cov(X,Z) + Cov(Z,X)$
 $Var(X - Z) = Var(X + -Z)$
@@ -25,13 +25,14 @@ $= c*E[(X-E(X))(Z-E(X)]$
 $= c * Cov(X, Z)$
 
 
-# Gneralized linear model characteristics
+# Generalized linear model characteristics
+
 $E(g(y)|x) = β0 + β1*x1 + β2*x2$
 
 
 ## Standard error of a linear combination 
 
-$RD = E(y|x=1) - E(y|x=0) $
+$RD = E(y|x=1) - E(y|x=0)$
 $= β0 + β1*1 + β2*1 - (β0 + β1*0 + β2*0)$
 $=β1 + β2$
 $Var(RD) = Var(β1 + β2)$
@@ -64,26 +65,27 @@ $= \mathbf{Xββ'X} - E(\mathbf{Xβ})\mathbf{β'X}  - \mathbf{Xβ}E(\mathbf{X'β
 
 
 
-```@example
+```@example math
 using GLM, Random, LinearAlgebra
 
 x = rand(100, 2)
 y = 0.1 .+ x * [1.0, 0.3] + randn(100)
-
 X = hcat(ones(length(y)), x)
-
-betahat = inv(X'X)X'y
-
 ft = fit(LinearModel, X, y)
-
-
-
-
-
 V = GLM.vcov(ft)
 diag(X * V * X')
 
-X[1:1,:] * V * X[1:1,:]'
+println("Coefficient estimate from Qgcomp")
+grad = zeros(length(coef(ft)))
+grad[2:3] .= 1 # second and third coefficients are exposures from the mixture
+println(sum(coef(ft)[findall(grad .== 1)]))
+println("Coefficient standard error from Qgcomp")
+println(sqrt(grad' * V * grad))
+```
+
+```@example math
+using Qgcomp, DataFrames
+qgcomp_glm_noboot(@formula(y~x1+x2), DataFrame(y=y, x1=x[:,1], x2=x[:,2]), [:x1, :x2], nothing, Normal())
 
 ```
 

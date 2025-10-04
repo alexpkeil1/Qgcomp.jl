@@ -14,7 +14,9 @@ Modules = [Qgcomp]
 
 ```@contents
 Pages = [
-    "glm.md"
+    "glm.md",
+    "cox.md",
+    "math/underlying_math.md"
     ]
     Depth = 4
 ```
