@@ -12,7 +12,7 @@ using Weave
 
 println(repo_root)
 
-jmdfiles = ["math/underlying_math.md"]
+jmdfiles = ["underlying_math.md"]
 
 for jmdf in jmdfiles
 #    weave(joinpath(repo_root, "docs/src/", jmdf))
@@ -24,14 +24,16 @@ end
 push!(LOAD_PATH, "../src/")
 
 makedocs(;
-    format = Documenter.HTML(),
+    format = Documenter.HTML(; size_threshold=1_000_000),
     modules = [Qgcomp],
     sitename = "Qgcomp: quantile g-computation in Julia",
     pages = [
         "Help" => "index.md",
-        "Details" =>["Generalized Linear Models" => "glm.md", 
-        "Underlying math" => "math/underlying_math.md"],
-        "Math" =>[],
+        "Details" =>[
+            "Generalized Linear Models" => "glm.md", 
+            "Time-to-event and advanced topics" => "cox.md", 
+            ],
+        "Math" =>["Underlying math" => "underlying_math.md"],
         #=
         "Examples" => [
             "Non-parametric survival analysis" => "nonparametric.md",

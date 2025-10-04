@@ -1,3 +1,7 @@
+# Some underlying mathematics of Qgcomp
+
+Here are some of the mathematical building blocks of the package. None of these are new, but they are helpful for understanding how the approach works.
+
 ## Rules of variance:
 ### Variance of a sum of random variables
 $Var(X + Z) = var(X) + Var(Z) + Cov(X,Z) + Cov(Z,X)$
