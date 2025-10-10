@@ -234,7 +234,7 @@ function dobootcox(
     bootdf = data[bootidx, :]
     #bootids = id[bootidx]
     # underlying fit
-    ulfit = fit(LSurvival.PHModel, formula, bootdf) # this form needed for proper use of predict function
+    ulfit = fit(LSurvival.PHModel, formula, bootdf, contrasts=contrasts, id = LSurvival.ID.(values(ubootid))) # this form needed for proper use of predict function
 
     # msmfit
     msm, dpred, dpredmean = _fit_msm_cox(rng, msmformula, bootdf, ulfit, contrasts, expnms, intvals, bootid, mcsize)

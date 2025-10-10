@@ -257,7 +257,7 @@ function doboot(
     #bootids = id[bootidx]
     mcsize = :mcsize ∈ keys(kwargs) ? kwargs[:mcsize] : length(uid)
     # underlying fit
-    ulfit = fit(GeneralizedLinearModel, formula, bootdf, family, link) # this form needed for proper use of predict function
+    ulfit = fit(GeneralizedLinearModel, formula, bootdf, family, link, contrasts=contrasts) # this form needed for proper use of predict function
 
     # msmfit
     msm, _, ymeanpred, _, meanypredmsm = _fit_msm(rng, msmformula, bootdf, ulfit, msmfamily, msmlink, contrasts, expnms, intvals, bootid, mcsize)
