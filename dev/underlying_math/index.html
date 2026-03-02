@@ -14,22 +14,17 @@ grad[2:3] .= 1 # second and third coefficients are exposures from the mixture
 println(sum(coef(ft)[findall(grad .== 1)]))
 println(&quot;Coefficient standard error from Qgcomp&quot;)
 println(sqrt(grad&#39; * V * grad))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Coefficient estimate from Qgcomp
-1.529565123353092
+1.6134026339415688
 Coefficient standard error from Qgcomp
-0.5159214745210118</code></pre><pre><code class="language-julia hljs">using Qgcomp, DataFrames
+0.5227631688681956</code></pre><pre><code class="language-julia hljs">using Qgcomp, DataFrames
 qgcomp_glm_noboot(@formula(y~x1+x2), DataFrame(y=y, x1=x[:,1], x2=x[:,2]), [:x1, :x2], nothing, Normal())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Scaled effect size (negative direction)
 (none)
 Scaled effect size (positive direction)
 <span class="sgr1">2×4 DataFrame</span>
-<span class="sgr1"> Row </span>│<span class="sgr1"> exposure  coef      weight    ψ_partial </span>
-<span class="sgr1">     </span>│<span class="sgr90"> String    Float64   Float64   Float64   </span>
-─────┼─────────────────────────────────────────
-   1 │ x2        0.575902  0.376513    1.52957
-   2 │ x1        0.953663  0.623487    1.52957
-─────────────────────────────────────────────────────────────────────────
-                  Coef.  Std. Error     z  Pr(&gt;|z|)  Lower 95%  Upper 95%
-─────────────────────────────────────────────────────────────────────────
-(Intercept)  0.00297855    0.287092  0.01    0.9917  -0.559711   0.565668
-mixture      1.52957       0.515921  2.96    0.0030   0.518378   2.54075
-─────────────────────────────────────────────────────────────────────────
-</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../cox/">« Time-to-event and advanced topics</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Friday 10 October 2025 15:51">Friday 10 October 2025</span>. Using Julia version 1.11.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<span class="sgr1"> Row </span>│<span class="sgr1"> exposure  coef      weight     ψ_partial </span>
+<span class="sgr1">     </span>│<span class="sgr90"> String    Float64   Float64    Float64   </span>
+─────┼──────────────────────────────────────────
+   1 │ x2        0.126094  0.0781542     1.6134
+   2 │ x1        1.48731   0.921846      1.6134
+StatsBase.CoefTable(Any[[-0.17619665238002644, 1.6134026339415748], [0.28457450033987114, 0.5227631688681956], [-0.6191582596810059, 3.0862974479144345], [0.5358121063280529, 0.002026659733484436], [-0.7339524239646563, 0.5888056505158792], [0.3815591192046034, 2.6379996173672704]], [&quot;Coef.&quot;, &quot;Std. Error&quot;, &quot;z&quot;, &quot;Pr(&gt;|z|)&quot;, &quot;Lower 95%&quot;, &quot;Upper 95%&quot;], [&quot;(Intercept)&quot;, &quot;mixture&quot;], 4, 3)
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../cox/">« Time-to-event and advanced topics</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 2 March 2026 17:54">Monday 2 March 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
