@@ -472,3 +472,4 @@ function bspline(x, nk; degree = 1, knts = nothing)
     end
     bsplineBasis(x, knts, degree)
 end
+;
