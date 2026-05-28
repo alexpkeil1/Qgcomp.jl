@@ -246,11 +246,12 @@ function Base.show(io::IO, m::QGcomp_cox)
     if isfitted(m)
         if !isnothing(m.msm)
             println(io, "Underlying fit")
-            println(io, coeftable(m.ulfit))
+            show(io, "text/plain", coeftable(m.ulfit))
             println(io, "\nMSM")
         end
-        show(io, m.qgcweights)
-        println(io, coeftable(m))
+        println(io, m.qgcweights)
+        show(io, "text/plain", coeftable(m))
+        println("")
     else
         println(io, "Not fitted")
     end

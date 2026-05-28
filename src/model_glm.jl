@@ -520,11 +520,11 @@ function Base.show(io::IO, m::QGcomp_glm)
     if isfitted(m)
         if !isnothing(m.msm)
             println(io, "Underlying fit (Model-based CI)")
-            println(io, coeftable(m.ulfit))
+            show(io, "text/plain", coeftable(m.ulfit))
             println(io, "\nMSM (Bootstrap based CI)")
         end
-        show(io, m.qgcweights)
-        println(io, coeftable(m))
+        println(io, m.qgcweights)
+        show(io, "text/plain", coeftable(m))
     else
         println(io, "Not fitted")
     end

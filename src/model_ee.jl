@@ -232,11 +232,13 @@ end
 
 function Base.show(io::IO, m::QGcomp_ee)
     if m.fitted
-        println(io, "Underlying fit (estimating equation based CI)")
-        println(io, coeftable_eeul(m, limitcond = true))
-        show(io, m.qgcweights)
-        println(io, "\nMSM (estimating equation based CI)")
-        println(io, coeftable(m))
+        println(io, "Underlying fit (estimating equation based Std. Error)")
+        show(io, "text/plain", coeftable_eeul(m, limitcond = true))
+        println("")
+        println(io, m.qgcweights)
+        println(io, "\nMSM (estimating equation based Std. Error)")
+        show(io, "text/plain", coeftable(m))
+        println("")
     else
         println(io, "Not fitted")
     end

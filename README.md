@@ -7,6 +7,13 @@ and [here (dev version)](https://alexpkeil1.github.io/Qgcomp.jl/dev/)
 ### Developer's note
 This package is mostly for internal usage, so documentation is not extensive. Below is a simple simulation example to get you started if you wish to use this for your own work. Questions about functionality submitted as bug reports will be closed without comment. Functionality questions can be addressed for the R package `qgcomp`.
 
+### Installation
+```julia
+# first install "epiregistry" to get access to LSurvival and Qgcomp packages
+]registry add "https://github.com/alexpkeil1/EpiRegistry"
+]add Qgcomp
+```
+
 ### Continuous outcome
 ```julia
 using Qgcomp, DataFrames, StatsModels

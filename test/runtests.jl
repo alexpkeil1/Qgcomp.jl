@@ -210,14 +210,17 @@ end
     # (true quadrtatic term will equal single quadratic term), main term will not but will equal sum of terms
     # very time intensive, skipped
 
-    # test 7: no intercept (just check for error here)
+    # test 7: no intercept (just check for error here - no longer an error!)
+    
+    #=
     msg = try
         qgcomp_cox_noboot(form_noint, survdata, expnms, 4)
     catch e
         e
     end
     @test typeof(msg) == MethodError
-
+    =#
+    
     # test 8: leaving q=nothing with standardized data
     mint_noq = qgcomp_cox_noboot(form, survdata, expnms, nothing)
     coxph_noq = coxph(form, survdata)

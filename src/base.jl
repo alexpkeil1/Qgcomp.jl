@@ -8,7 +8,7 @@ end
 
 function Base.show(io::IO, w::QGcomp_weights)
     if !isvalid(w)
-        println(io, "Exposure specific weights not estimated in this type of model")
+        println(io, "Exposure specific weights are not estimated in this type of model")
     else
         println(io, "Scaled effect size (negative direction)")
         println(io, size(w.neg, 1) > 0 ? w.neg : "(none)")
