@@ -14,20 +14,25 @@ grad[2:3] .= 1 # second and third coefficients are exposures from the mixture
 println(sum(coef(ft)[findall(grad .== 1)]))
 println(&quot;Coefficient standard error from Qgcomp&quot;)
 println(sqrt(grad&#39; * V * grad))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Coefficient estimate from Qgcomp
-0.8364761492895507
+0.9468773157929499
 Coefficient standard error from Qgcomp
-0.46222390942904545</code></pre><pre><code class="language-julia hljs">using Qgcomp, DataFrames
+0.5297826530163068</code></pre><pre><code class="language-julia hljs">using Qgcomp, DataFrames
 qgcomp_glm_noboot(@formula(y~x1+x2), DataFrame(y=y, x1=x[:,1], x2=x[:,2]), [:x1, :x2], nothing, Normal())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Scaled effect size (negative direction)
 <span class="sgr1">1×4 DataFrame</span>
-<span class="sgr1"> Row </span>│<span class="sgr1"> exposure  coef       weight   ψ_partial </span>
-<span class="sgr1">     </span>│<span class="sgr90"> String    Float64    Float64  Float64   </span>
-─────┼─────────────────────────────────────────
-   1 │ x2        -0.273147      1.0  -0.273147
+<span class="sgr1"> Row </span>│<span class="sgr1"> exposure  coef        weight   ψ_partial  </span>
+<span class="sgr1">     </span>│<span class="sgr90"> String    Float64     Float64  Float64    </span>
+─────┼───────────────────────────────────────────
+   1 │ x2        -0.0961558      1.0  -0.0961558
 Scaled effect size (positive direction)
 <span class="sgr1">1×4 DataFrame</span>
 <span class="sgr1"> Row </span>│<span class="sgr1"> exposure  coef     weight   ψ_partial </span>
 <span class="sgr1">     </span>│<span class="sgr90"> String    Float64  Float64  Float64   </span>
 ─────┼───────────────────────────────────────
-   1 │ x1        1.10962      1.0    1.10962
-StatsBase.CoefTable(Any[[0.3822322110070819, 0.8364761492895503], [0.24211612889187475, 0.46222390942904545], [1.5787143663517798, 1.8096773711312204], [0.11440158807537806, 0.07034583370309151], [-0.09230668169725115, -0.0694660659846843], [0.856771103711415, 1.7424183645637847]], [&quot;Coef.&quot;, &quot;Std. Error&quot;, &quot;z&quot;, &quot;Pr(&gt;|z|)&quot;, &quot;Lower 95%&quot;, &quot;Upper 95%&quot;], [&quot;(Intercept)&quot;, &quot;mixture&quot;], 4, 3)
-</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../cox/">« Time-to-event and advanced topics</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Thursday 28 May 2026 19:43">Thursday 28 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   1 │ x1        1.04303      1.0    1.04303
+
+────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error     z  Pr(&gt;|z|)   Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────
+(Intercept)  0.205074    0.282579  0.73    0.4680  -0.348771    0.758919
+mixture      0.946877    0.529783  1.79    0.0739  -0.0914776   1.98523
+────────────────────────────────────────────────────────────────────────</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../cox/">« Time-to-event and advanced topics</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Thursday 28 May 2026 20:48">Thursday 28 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
