@@ -154,7 +154,8 @@ function StatsBase.fit!(
     res = nlsolve(
         x -> qgcomp_eedf( x, m.data, m.expnms, m.intvals, f, msmformula, pcond, pmsm, m.family, m.link, msmfamily, msmlink, m.contrasts, ),
         inits,
-        autodiff = :forward,
+        #autodiff = :forward,                  # 4.0 <= NLSolvers < 5.0
+        #autodiff = ADTypes.AutoForwardDiff() # NLSolvers >= 5.0
     )
 
     A = ForwardDiff.jacobian(
